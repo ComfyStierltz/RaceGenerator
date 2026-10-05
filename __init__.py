@@ -225,7 +225,7 @@ class SpriteStandardPoses:
                 "positive": ("STRING", {"multiline": True, "default": ""}),
                 "negative": ("STRING", {"multiline": True, "default": ""}),
                 "denoise": ("FLOAT", {"default": 0.6, "min": 0.0, "max": 1.0, "step": 0.01}),
-                "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+                "noise_index": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
                 "steps": ("INT", {"default": 10, "min": 1, "max": 40}),
                 "cfg": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.1}),
                 "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
@@ -239,7 +239,7 @@ class SpriteStandardPoses:
     FUNCTION = "run"
     CATEGORY = "sprite"
 
-    def run(self, model, clip, vae, latent, shared_positive, shared_negative, pose, positive, negative, denoise, seed, steps, cfg, sampler_name, scheduler, frame):
+    def run(self, model, clip, vae, latent, shared_positive, shared_negative, pose, positive, negative, denoise, noise_index, steps, cfg, sampler_name, scheduler, frame):
         import torch
         import torch.nn.functional as F
         from nodes import common_ksampler
@@ -271,7 +271,7 @@ class SpriteStandardPoses:
         for i, item in enumerate(poses):
             pos = shared_positive + encode((frame or "") + " " + (item.get("positive") or ""))
             neg = shared_negative + encode(item.get("negative") or "")
-            sampled = common_ksampler(model, seed + i, steps, cfg, sampler_name, scheduler, pos, neg, latent, denoise=float(item.get("denoise") or 0.6))[0]
+            sampled = common_ksampler(model, noise_index + i, steps, cfg, sampler_name, scheduler, pos, neg, latent, denoise=float(item.get("denoise") or 0.6))[0]
             images.append(margin(vae.decode(sampled["samples"])))
         singles = [(images[i] if i < len(images) else blank) for i in range(7)]
         batch = torch.cat(images, dim=0) if images else blank
