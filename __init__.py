@@ -12,7 +12,7 @@ except Exception:
     PromptServer = None
 
 WEB_DIRECTORY = "./web"
-RACEGENERATOR_VERSION = "0.5.2"
+RACEGENERATOR_VERSION = "0.5.3"
 print(f"[RaceGenerator] {RACEGENERATOR_VERSION} reference_image is a string")
 NODE_DIR = os.path.dirname(os.path.realpath(__file__))
 RACE_DIR = os.path.join(NODE_DIR, "presets")
@@ -303,6 +303,26 @@ def pad_batch(images):
     return torch.cat(padded, dim=0)
 
 
+def save_pose_files(images, names, folder):
+    import folder_paths
+    from PIL import Image
+    out = Path(folder_paths.get_output_directory()) / (folder or "sprites")
+    out.mkdir(parents=True, exist_ok=True)
+    for image, name in zip(images, names):
+        arr = (image[0].clamp(0, 1).cpu().numpy() * 255).astype("uint8")
+        safe = "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in name.strip()) or "pose"
+        Image.fromarray(arr).save(out / f"{safe}.png")
+    return str(out)
+
+
+def scale_4k(image, enabled):
+    if not enabled:
+        return image
+    import torch.nn.functional as F
+    b, h, w, c = image.shape
+    return F.interpolate(image.permute(0, 3, 1, 2), size=(round(h * 2.46), round(w * 2.46)), mode="bicubic", align_corners=False).permute(0, 2, 3, 1)
+
+
 def custom_pose_names():
     names = [p.get("name") for p in load_custom_poses()["poses"] if p.get("name")]
     return names or ["(пусто)"]
@@ -329,7 +349,9 @@ class SpriteStandardPoses:
                 "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
                 "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
                 "frame": ("STRING", {"multiline": True, "default": ""}),
-            }
+                "output_folder": ("STRING", {"default": "sprites"}),
+            },
+            "optional": {"upscale_4k": ("BOOLEAN", {"default": False})},
         }
 
     RETURN_TYPES = ("IMAGE",) * 7 + ("IMAGE",)
@@ -337,7 +359,7 @@ class SpriteStandardPoses:
     FUNCTION = "run"
     CATEGORY = "sprite"
 
-    def run(self, model, clip, vae, latent, shared_positive, shared_negative, pose, positive, negative, denoise, noise_index, steps, cfg, sampler_name, scheduler, frame):
+    def run(self, model, clip, vae, latent, shared_positive, shared_negative, pose, positive, negative, denoise, noise_index, steps, cfg, sampler_name, scheduler, frame, output_folder="sprites", upscale_4k=False):
         import torch
         import torch.nn.functional as F
         from nodes import common_ksampler
@@ -375,8 +397,9 @@ class SpriteStandardPoses:
             neg = shared_negative + encode(item.get("negative") or "")
             sampled = common_ksampler(model, noise_index + i, steps, cfg, sampler_name, scheduler, pos, neg, latent, denoise=float(item.get("denoise") or 0.6))[0]
             images.append(margin(vae.decode(sampled["samples"])))
-        singles = [(images[i] if i < len(images) else blank) for i in range(7)]
-        batch = pad_batch(images) if images else blank
+        singles = [scale_4k(images[i] if i < len(images) else blank, upscale_4k) for i in range(7)]
+        save_pose_files(singles, [item.get("name") or f"{i+1:02}" for i, item in enumerate(poses[:7])], output_folder)
+        batch = pad_batch(singles)
         return tuple(singles) + (batch,)
 
 
@@ -405,8 +428,12 @@ class SpriteCustomPoses:
                 "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
                 "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
                 "frame": ("STRING", {"multiline": True, "default": ""}),
+                "output_folder": ("STRING", {"default": "sprites"}),
             },
-            "optional": {"pose_reference": ("IMAGE",)},
+            "optional": {
+                "pose_reference": ("IMAGE",),
+                "upscale_4k": ("BOOLEAN", {"default": False}),
+            },
         }
 
     RETURN_TYPES = ("IMAGE", "IMAGE", "IMAGE")
@@ -414,7 +441,7 @@ class SpriteCustomPoses:
     FUNCTION = "run"
     CATEGORY = "sprite"
 
-    def run(self, model, clip, vae, latent, shared_positive, shared_negative, pose, positive, negative, denoise, use_reference, reference_image, width, height, noise_index, steps, cfg, sampler_name, scheduler, frame, pose_reference=None):
+    def run(self, model, clip, vae, latent, shared_positive, shared_negative, pose, positive, negative, denoise, use_reference, reference_image, width, height, noise_index, steps, cfg, sampler_name, scheduler, frame, output_folder="sprites", pose_reference=None, upscale_4k=False):
         import torch
         import torch.nn.functional as F
         from nodes import common_ksampler
@@ -441,7 +468,7 @@ class SpriteCustomPoses:
         def fit(image, tw, th):
             image = as_image(image)
             b, h, w, c = image.shape
-            scale = min(tw / w, th / h) * 0.72
+            scale = min(tw / max(w, 1), th / max(h, 1)) * 0.5
             nw, nh = max(1, int(w * scale)), max(1, int(h * scale))
             scaled = F.interpolate(image.permute(0, 3, 1, 2), size=(nh, nw), mode="bicubic", align_corners=False).permute(0, 2, 3, 1)
             canvas = torch.zeros((b, th, tw, c), device=image.device, dtype=image.dtype)
@@ -473,6 +500,10 @@ class SpriteCustomPoses:
             sampled = common_ksampler(model, noise_index + i, steps, cfg, sampler_name, scheduler, pos, neg, pose_latent, denoise=float(item.get("denoise") or 0.8))[0]
             images.append(plate(vae.decode(sampled["samples"]), tw, th))
         blank = torch.zeros((1, 1560, 1040, 3))
+        first = images[0] if images else blank
+        second = images[1] if len(images) > 1 else blank
+        images = [scale_4k(img, upscale_4k) for img in images]
+        save_pose_files(images, [item.get("name") or f"custom_{i+1:02}" for i, item in enumerate(poses)], output_folder)
         first = images[0] if images else blank
         second = images[1] if len(images) > 1 else blank
         batch = pad_batch(images) if images else blank

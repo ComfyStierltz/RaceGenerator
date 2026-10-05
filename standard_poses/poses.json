@@ -20,15 +20,15 @@
     },
     {
       "name": "04 three-quarter rear left",
-      "positive": "Standing upright, three-quarter rear view from her left. Back and left shoulder face the camera. Arms at sides, both feet flat. Do not turn the chest to the camera. The back of the torso faces the camera. Shoulder blades and spine visible. No belly, no navel, no breasts, no nipples.",
+      "positive": "Standing upright, three-quarter rear view from her left. Back and left shoulder face the camera. Arms at sides, both feet flat. Do not turn the chest to the camera. The back of the torso faces the camera. Shoulder blades and spine visible. No belly, no navel, no breasts, no nipples. Strict three-quarter back. Face hidden or only a sliver of cheek. Chest and belly are not visible.",
       "negative": "front view, chest facing camera, breasts facing camera, nipples facing camera, navel, belly button, stomach facing camera, belly facing camera, abdomen visible, belly skin, face facing camera, frontal torso, looking at camera from the front, chest turned toward camera, breasts visible from the front",
-      "denoise": 0.78
+      "denoise": 0.9
     },
     {
       "name": "05 back",
-      "positive": "Strict rear view. Back fully to the camera, shoulder blades and spine visible. Arms at sides, both feet flat. Do not turn the chest to the camera. The back of the torso faces the camera. Shoulder blades and spine visible. No belly, no navel, no breasts, no nipples.",
+      "positive": "Strict rear view. Back fully to the camera, shoulder blades and spine visible. Arms at sides, both feet flat. Do not turn the chest to the camera. The back of the torso faces the camera. Shoulder blades and spine visible. No belly, no navel, no breasts, no nipples. Full back, face not visible, hair over the back of the head. One person, two legs, two arms.",
       "negative": "front view, chest facing camera, breasts facing camera, nipples facing camera, navel, belly button, stomach facing camera, belly facing camera, abdomen visible, belly skin, face facing camera, frontal torso, looking at camera from the front, chest turned toward camera, breasts visible from the front",
-      "denoise": 0.84
+      "denoise": 0.95
     },
     {
       "name": "06 right profile",
