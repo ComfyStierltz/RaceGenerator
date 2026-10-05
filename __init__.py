@@ -12,7 +12,7 @@ except Exception:
     PromptServer = None
 
 WEB_DIRECTORY = "./web"
-RACEGENERATOR_VERSION = "0.5.3"
+RACEGENERATOR_VERSION = "0.5.4"
 print(f"[RaceGenerator] {RACEGENERATOR_VERSION} reference_image is a string")
 NODE_DIR = os.path.dirname(os.path.realpath(__file__))
 RACE_DIR = os.path.join(NODE_DIR, "presets")
@@ -358,6 +358,7 @@ class SpriteStandardPoses:
     RETURN_NAMES = tuple(f"pose_{i:02}" for i in range(1, 8)) + ("all_poses",)
     FUNCTION = "run"
     CATEGORY = "sprite"
+    OUTPUT_NODE = True
 
     def run(self, model, clip, vae, latent, shared_positive, shared_negative, pose, positive, negative, denoise, noise_index, steps, cfg, sampler_name, scheduler, frame, output_folder="sprites", upscale_4k=False):
         import torch
@@ -440,6 +441,7 @@ class SpriteCustomPoses:
     RETURN_NAMES = ("pose_01", "pose_02", "all_poses")
     FUNCTION = "run"
     CATEGORY = "sprite"
+    OUTPUT_NODE = True
 
     def run(self, model, clip, vae, latent, shared_positive, shared_negative, pose, positive, negative, denoise, use_reference, reference_image, width, height, noise_index, steps, cfg, sampler_name, scheduler, frame, output_folder="sprites", pose_reference=None, upscale_4k=False):
         import torch
