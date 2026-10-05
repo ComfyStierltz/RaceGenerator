@@ -185,6 +185,35 @@ if PromptServer is not None:
         save_poses(store)
         return web.json_response({"ok": True, "names": [p["name"] for p in poses]})
 
+    @PromptServer.instance.routes.get("/sprite_preset/custom_poses")
+    async def sprite_preset_custom_poses(request):
+        return web.json_response(load_custom_poses())
+
+    @PromptServer.instance.routes.post("/sprite_preset/save_custom_pose")
+    async def sprite_preset_save_custom_pose(request):
+        data = await request.json()
+        name = (data.get("name") or "").strip()
+        if not name:
+            return web.json_response({"error": "empty name"}, status=400)
+        store = load_custom_poses()
+        poses = store["poses"]
+        item = next((p for p in poses if p.get("name") == name), None)
+        payload = {
+            "name": name,
+            "positive": data.get("positive") or "",
+            "negative": data.get("negative") or "",
+            "denoise": float(data.get("denoise") or 0.8),
+            "use_reference": bool(data.get("use_reference")),
+            "width": int(data.get("width") or 1040),
+            "height": int(data.get("height") or 1560),
+        }
+        if item is None:
+            poses.append(payload)
+        else:
+            item.update(payload)
+        save_custom_poses(store)
+        return web.json_response({"ok": True, "names": [p["name"] for p in poses]})
+
 
 
 POSE_DIR = os.path.join(NODE_DIR, "standard_poses")
@@ -207,6 +236,29 @@ def save_poses(store):
 
 def pose_names():
     names = [p.get("name") for p in load_poses()["poses"] if p.get("name")]
+    return names or ["(пусто)"]
+
+
+
+CUSTOM_DIR = os.path.join(NODE_DIR, "custom_poses")
+CUSTOM_FILE = os.path.join(CUSTOM_DIR, "poses.json")
+
+
+def load_custom_poses():
+    os.makedirs(CUSTOM_DIR, exist_ok=True)
+    if not os.path.exists(CUSTOM_FILE):
+        return {"poses": []}
+    return {"poses": read_json(CUSTOM_FILE).get("poses") or []}
+
+
+def save_custom_poses(store):
+    os.makedirs(CUSTOM_DIR, exist_ok=True)
+    with open(CUSTOM_FILE, "w", encoding="utf-8") as f:
+        json.dump(store, f, ensure_ascii=False, indent=2)
+
+
+def custom_pose_names():
+    names = [p.get("name") for p in load_custom_poses()["poses"] if p.get("name")]
     return names or ["(пусто)"]
 
 
@@ -282,13 +334,110 @@ class SpriteStandardPoses:
         return tuple(singles) + (batch,)
 
 
+class SpriteCustomPoses:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "model": ("MODEL",),
+                "clip": ("CLIP",),
+                "vae": ("VAE",),
+                "latent": ("LATENT",),
+                "shared_positive": ("CONDITIONING",),
+                "shared_negative": ("CONDITIONING",),
+                "pose": (custom_pose_names(), {"default": custom_pose_names()[0]}),
+                "positive": ("STRING", {"multiline": True, "default": ""}),
+                "negative": ("STRING", {"multiline": True, "default": ""}),
+                "denoise": ("FLOAT", {"default": 0.86, "min": 0.0, "max": 1.0, "step": 0.01}),
+                "use_reference": ("BOOLEAN", {"default": False}),
+                "width": ("INT", {"default": 1560, "min": 512, "max": 2048, "step": 8}),
+                "height": ("INT", {"default": 1560, "min": 512, "max": 2048, "step": 8}),
+                "noise_index": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+                "steps": ("INT", {"default": 10, "min": 1, "max": 40}),
+                "cfg": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.1}),
+                "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
+                "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
+                "frame": ("STRING", {"multiline": True, "default": ""}),
+            },
+            "optional": {"pose_reference": ("IMAGE",)},
+        }
+
+    RETURN_TYPES = ("IMAGE", "IMAGE", "IMAGE")
+    RETURN_NAMES = ("pose_01", "pose_02", "all_poses")
+    FUNCTION = "run"
+    CATEGORY = "sprite"
+
+    def run(self, model, clip, vae, latent, shared_positive, shared_negative, pose, positive, negative, denoise, use_reference, width, height, noise_index, steps, cfg, sampler_name, scheduler, frame, pose_reference=None):
+        import torch
+        import torch.nn.functional as F
+        from nodes import common_ksampler
+
+        store = load_custom_poses()
+        for item in store["poses"]:
+            if item.get("name") == pose:
+                item.update({"positive": positive, "negative": negative, "denoise": denoise, "use_reference": use_reference, "width": width, "height": height})
+                save_custom_poses(store)
+                break
+        poses = load_custom_poses()["poses"]
+
+        def encode(text):
+            tokens = clip.tokenize(text or "")
+            return clip.encode_from_tokens_scheduled(tokens)
+
+        def as_image(image):
+            while image.ndim > 4:
+                image = image.squeeze(1)
+            if image.ndim == 3:
+                image = image.unsqueeze(0)
+            return image
+
+        def fit(image, tw, th):
+            image = as_image(image)
+            b, h, w, c = image.shape
+            scale = min(tw / w, th / h) * 0.72
+            nw, nh = max(1, int(w * scale)), max(1, int(h * scale))
+            scaled = F.interpolate(image.permute(0, 3, 1, 2), size=(nh, nw), mode="bicubic", align_corners=False).permute(0, 2, 3, 1)
+            canvas = torch.zeros((b, th, tw, c), device=image.device, dtype=image.dtype)
+            y = max(0, th - nh - 80)
+            x = max(0, (tw - nw) // 2)
+            canvas[:, y:y + nh, x:x + nw] = scaled[:, :nh, :nw]
+            return canvas
+
+        def plate(image, tw, th):
+            image = as_image(image)
+            b, h, w, c = image.shape
+            nh, nw = max(1, int(h * 0.84)), max(1, int(w * 0.84))
+            scaled = F.interpolate(image.permute(0, 3, 1, 2), size=(nh, nw), mode="bicubic", align_corners=False).permute(0, 2, 3, 1)
+            canvas = torch.zeros((b, th, tw, c), device=image.device, dtype=image.dtype)
+            canvas[:, 80:80 + nh, 80:80 + nw] = scaled[:, :min(nh, th - 80), :min(nw, tw - 80)]
+            return canvas
+
+        images = []
+        for i, item in enumerate(poses):
+            tw, th = int(item.get("width") or 1040), int(item.get("height") or 1560)
+            pose_latent = latent
+            if pose_reference is not None and item.get("use_reference"):
+                pose_latent = vae.encode(fit(pose_reference, tw, th))
+            pos = shared_positive + encode((frame or "") + " " + (item.get("positive") or ""))
+            neg = shared_negative + encode(item.get("negative") or "")
+            sampled = common_ksampler(model, noise_index + i, steps, cfg, sampler_name, scheduler, pos, neg, pose_latent, denoise=float(item.get("denoise") or 0.8))[0]
+            images.append(plate(vae.decode(sampled["samples"]), tw, th))
+        blank = torch.zeros((1, 1560, 1040, 3))
+        first = images[0] if images else blank
+        second = images[1] if len(images) > 1 else blank
+        batch = torch.cat(images, dim=0) if images else blank
+        return (first, second, batch)
+
+
 NODE_CLASS_MAPPINGS = {
     "SpritePromptPreset": SpritePromptPreset,
     "SpritePresetSelect": SpritePresetSelect,
     "SpriteStandardPoses": SpriteStandardPoses,
+    "SpriteCustomPoses": SpriteCustomPoses,
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
     "SpritePromptPreset": "пресеты расы и одежды v3",
     "SpritePresetSelect": "выбор расы и одежды",
     "SpriteStandardPoses": "Standard poses",
+    "SpriteCustomPoses": "Custom poses",
 }
