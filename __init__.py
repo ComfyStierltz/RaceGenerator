@@ -259,6 +259,10 @@ class SpriteStandardPoses:
             return clip.encode_from_tokens_scheduled(tokens)
 
         def margin(image):
+            while image.ndim > 4:
+                image = image.squeeze(1)
+            if image.ndim == 3:
+                image = image.unsqueeze(0)
             b, h, w, c = image.shape
             nh, nw = max(1, int(h * 0.84)), max(1, int(w * 0.84))
             scaled = F.interpolate(image.permute(0, 3, 1, 2), size=(nh, nw), mode="bicubic", align_corners=False).permute(0, 2, 3, 1)
