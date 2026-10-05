@@ -89,6 +89,7 @@ app.registerExtension({
               negative: widget(node, "negative")?.value || "",
               denoise: widget(node, "denoise")?.value || 0.86,
               use_reference: widget(node, "use_reference")?.value || false,
+              reference_image: widget(node, "reference_image")?.value || "none",
               width: widget(node, "width")?.value || 1560,
               height: widget(node, "height")?.value || 1560,
             }),
@@ -107,6 +108,7 @@ app.registerExtension({
           widget(node, "negative").value = item.negative || "";
           widget(node, "denoise").value = item.denoise || 0.86;
           widget(node, "use_reference").value = !!item.use_reference;
+          widget(node, "reference_image").value = item.reference_image || "none";
           widget(node, "width").value = item.width || 1560;
           widget(node, "height").value = item.height || 1560;
         };

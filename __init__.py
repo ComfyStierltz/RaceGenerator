@@ -257,6 +257,41 @@ def save_custom_poses(store):
         json.dump(store, f, ensure_ascii=False, indent=2)
 
 
+
+def reference_images():
+    try:
+        import folder_paths
+        return folder_paths.get_filename_list("input")
+    except Exception:
+        return []
+
+
+def load_reference(name):
+    if not name or name == "none":
+        return None
+    import folder_paths
+    from PIL import Image
+    import numpy as np
+    import torch
+    path = folder_paths.get_annotated_filepath(name)
+    image = Image.open(path).convert("RGB")
+    return torch.from_numpy(np.array(image).astype(np.float32) / 255.0).unsqueeze(0)
+
+
+def pad_batch(images):
+    import torch
+    import torch.nn.functional as F
+    height = max(img.shape[1] for img in images)
+    width = max(img.shape[2] for img in images)
+    padded = []
+    for img in images:
+        b, h, w, c = img.shape
+        canvas = torch.zeros((b, height, width, c), device=img.device, dtype=img.dtype)
+        canvas[:, :h, :w] = img
+        padded.append(canvas)
+    return torch.cat(padded, dim=0)
+
+
 def custom_pose_names():
     names = [p.get("name") for p in load_custom_poses()["poses"] if p.get("name")]
     return names or ["(пусто)"]
@@ -330,7 +365,7 @@ class SpriteStandardPoses:
             sampled = common_ksampler(model, noise_index + i, steps, cfg, sampler_name, scheduler, pos, neg, latent, denoise=float(item.get("denoise") or 0.6))[0]
             images.append(margin(vae.decode(sampled["samples"])))
         singles = [(images[i] if i < len(images) else blank) for i in range(7)]
-        batch = torch.cat(images, dim=0) if images else blank
+        batch = pad_batch(images) if images else blank
         return tuple(singles) + (batch,)
 
 
@@ -350,6 +385,7 @@ class SpriteCustomPoses:
                 "negative": ("STRING", {"multiline": True, "default": ""}),
                 "denoise": ("FLOAT", {"default": 0.86, "min": 0.0, "max": 1.0, "step": 0.01}),
                 "use_reference": ("BOOLEAN", {"default": False}),
+                "reference_image": (["none"] + reference_images(), {"default": "none"}),
                 "width": ("INT", {"default": 1560, "min": 512, "max": 2048, "step": 8}),
                 "height": ("INT", {"default": 1560, "min": 512, "max": 2048, "step": 8}),
                 "noise_index": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
@@ -367,7 +403,7 @@ class SpriteCustomPoses:
     FUNCTION = "run"
     CATEGORY = "sprite"
 
-    def run(self, model, clip, vae, latent, shared_positive, shared_negative, pose, positive, negative, denoise, use_reference, width, height, noise_index, steps, cfg, sampler_name, scheduler, frame, pose_reference=None):
+    def run(self, model, clip, vae, latent, shared_positive, shared_negative, pose, positive, negative, denoise, use_reference, reference_image, width, height, noise_index, steps, cfg, sampler_name, scheduler, frame, pose_reference=None):
         import torch
         import torch.nn.functional as F
         from nodes import common_ksampler
@@ -375,7 +411,7 @@ class SpriteCustomPoses:
         store = load_custom_poses()
         for item in store["poses"]:
             if item.get("name") == pose:
-                item.update({"positive": positive, "negative": negative, "denoise": denoise, "use_reference": use_reference, "width": width, "height": height})
+                item.update({"positive": positive, "negative": negative, "denoise": denoise, "use_reference": use_reference, "reference_image": reference_image, "width": width, "height": height})
                 save_custom_poses(store)
                 break
         poses = load_custom_poses()["poses"]
@@ -416,8 +452,13 @@ class SpriteCustomPoses:
         for i, item in enumerate(poses):
             tw, th = int(item.get("width") or 1040), int(item.get("height") or 1560)
             pose_latent = latent
-            if pose_reference is not None and item.get("use_reference"):
-                pose_latent = vae.encode(fit(pose_reference, tw, th))
+            ref = load_reference(item.get("reference_image"))
+            if ref is None and pose_reference is not None and item.get("use_reference"):
+                ref = pose_reference
+            if ref is not None and item.get("use_reference") and item.get("reference_image") not in (None, "", "none"):
+                pose_latent = vae.encode(fit(ref, tw, th))
+            elif pose_reference is not None and item.get("use_reference") and ref is not None:
+                pose_latent = vae.encode(fit(ref, tw, th))
             pos = shared_positive + encode((frame or "") + " " + (item.get("positive") or ""))
             neg = shared_negative + encode(item.get("negative") or "")
             sampled = common_ksampler(model, noise_index + i, steps, cfg, sampler_name, scheduler, pos, neg, pose_latent, denoise=float(item.get("denoise") or 0.8))[0]
@@ -425,7 +466,7 @@ class SpriteCustomPoses:
         blank = torch.zeros((1, 1560, 1040, 3))
         first = images[0] if images else blank
         second = images[1] if len(images) > 1 else blank
-        batch = torch.cat(images, dim=0) if images else blank
+        batch = pad_batch(images) if images else blank
         return (first, second, batch)
 
 
