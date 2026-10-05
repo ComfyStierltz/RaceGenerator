@@ -1,5 +1,6 @@
 
 import json
+import comfy.samplers
 import os
 import re
 
@@ -227,8 +228,8 @@ class SpriteStandardPoses:
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
                 "steps": ("INT", {"default": 10, "min": 1, "max": 40}),
                 "cfg": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.1}),
-                "sampler_name": (["euler_ancestral", "euler", "dpmpp_2m"],),
-                "scheduler": (["beta", "simple", "normal"],),
+                "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
+                "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
                 "frame": ("STRING", {"multiline": True, "default": ""}),
             }
         }
