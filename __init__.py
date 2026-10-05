@@ -12,7 +12,7 @@ except Exception:
     PromptServer = None
 
 WEB_DIRECTORY = "./web"
-RACEGENERATOR_VERSION = "0.5.4"
+RACEGENERATOR_VERSION = "0.5.5"
 print(f"[RaceGenerator] {RACEGENERATOR_VERSION} reference_image is a string")
 NODE_DIR = os.path.dirname(os.path.realpath(__file__))
 RACE_DIR = os.path.join(NODE_DIR, "presets")
@@ -305,6 +305,7 @@ def pad_batch(images):
 
 def save_pose_files(images, names, folder):
     import folder_paths
+    from pathlib import Path
     from PIL import Image
     out = Path(folder_paths.get_output_directory()) / (folder or "sprites")
     out.mkdir(parents=True, exist_ok=True)
