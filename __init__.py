@@ -12,6 +12,8 @@ except Exception:
     PromptServer = None
 
 WEB_DIRECTORY = "./web"
+RACEGENERATOR_VERSION = "0.5.2"
+print(f"[RaceGenerator] {RACEGENERATOR_VERSION} reference_image is a string")
 NODE_DIR = os.path.dirname(os.path.realpath(__file__))
 RACE_DIR = os.path.join(NODE_DIR, "presets")
 CLOTHES_DIR = os.path.join(NODE_DIR, "clothes")
@@ -278,6 +280,15 @@ def load_reference(name):
     return torch.from_numpy(np.array(image).astype(np.float32) / 255.0).unsqueeze(0)
 
 
+
+def as_latent(encoded):
+    if isinstance(encoded, dict) and "samples" in encoded:
+        return encoded
+    if isinstance(encoded, (tuple, list)):
+        encoded = encoded[0]
+    return {"samples": encoded}
+
+
 def pad_batch(images):
     import torch
     import torch.nn.functional as F
@@ -452,13 +463,11 @@ class SpriteCustomPoses:
         for i, item in enumerate(poses):
             tw, th = int(item.get("width") or 1040), int(item.get("height") or 1560)
             pose_latent = latent
-            ref = load_reference(item.get("reference_image"))
+            ref = load_reference(item.get("reference_image")) if item.get("use_reference") else None
             if ref is None and pose_reference is not None and item.get("use_reference"):
                 ref = pose_reference
-            if ref is not None and item.get("use_reference") and item.get("reference_image") not in (None, "", "none"):
-                pose_latent = vae.encode(fit(ref, tw, th))
-            elif pose_reference is not None and item.get("use_reference") and ref is not None:
-                pose_latent = vae.encode(fit(ref, tw, th))
+            if ref is not None and item.get("use_reference"):
+                pose_latent = as_latent(vae.encode(fit(ref, tw, th)))
             pos = shared_positive + encode((frame or "") + " " + (item.get("positive") or ""))
             neg = shared_negative + encode(item.get("negative") or "")
             sampled = common_ksampler(model, noise_index + i, steps, cfg, sampler_name, scheduler, pos, neg, pose_latent, denoise=float(item.get("denoise") or 0.8))[0]
