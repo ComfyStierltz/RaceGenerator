@@ -1,0 +1,46 @@
+{
+  "poses": [
+    {
+      "name": "01 front",
+      "positive": "Standing upright facing the camera, front view, arms relaxed at sides, both feet flat on the floor, soft closed-mouth smile, eyes looking at the camera.",
+      "negative": "",
+      "denoise": 0.46
+    },
+    {
+      "name": "02 three-quarter left",
+      "positive": "Standing upright, body turned 45 degrees to her left, three-quarter front view, face still clearly visible, eyes toward the camera, arms relaxed at sides, both feet flat on the floor.",
+      "negative": "",
+      "denoise": 0.58
+    },
+    {
+      "name": "03 left profile",
+      "positive": "Standing upright in exact left profile, facing the left edge of the frame, both arms at her sides, both feet flat on the floor.",
+      "negative": "",
+      "denoise": 0.68
+    },
+    {
+      "name": "04 three-quarter rear left",
+      "positive": "Standing upright, three-quarter rear view from her left. Back and left shoulder face the camera. Arms at sides, both feet flat. Do not turn the chest to the camera.",
+      "negative": "front view, chest facing camera, breasts facing camera, nipples facing camera, navel, belly button, stomach facing camera, belly facing camera, face facing camera, frontal torso, looking at camera from the front",
+      "denoise": 0.78
+    },
+    {
+      "name": "05 back",
+      "positive": "Strict rear view. Back fully to the camera, shoulder blades and spine visible. Arms at sides, both feet flat. Do not turn the chest to the camera.",
+      "negative": "front view, chest facing camera, breasts facing camera, nipples facing camera, navel, belly button, stomach facing camera, belly facing camera, face facing camera, frontal torso, looking at camera from the front",
+      "denoise": 0.84
+    },
+    {
+      "name": "06 right profile",
+      "positive": "Standing upright in exact right profile, facing the right edge of the frame, both arms at her sides, both feet flat on the floor.",
+      "negative": "",
+      "denoise": 0.68
+    },
+    {
+      "name": "07 three-quarter right",
+      "positive": "Standing upright, body turned 45 degrees to her right, three-quarter front view, face still clearly visible, eyes toward the camera, arms relaxed at sides, both feet flat on the floor.",
+      "negative": "",
+      "denoise": 0.58
+    }
+  ]
+}

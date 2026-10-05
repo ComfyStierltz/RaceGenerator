@@ -29,6 +29,49 @@ function fillCombo(w, names, selected) {
 app.registerExtension({
   name: "sprite.promptpreset",
   async beforeRegisterNodeDef(nodeType, nodeData) {
+    if (nodeData.name === "SpriteStandardPoses") {
+      const origPose = nodeType.prototype.onNodeCreated;
+      nodeType.prototype.onNodeCreated = function () {
+        const r = origPose?.apply(this, arguments);
+        const node = this;
+        const add = node.addWidget("button", "add pose", null, async () => {
+          const name = prompt("Pose name", "");
+          if (!name || !name.trim()) return;
+          await api.fetchApi("/sprite_preset/save_pose", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: name.trim(),
+              positive: widget(node, "positive")?.value || "",
+              negative: widget(node, "negative")?.value || "",
+              denoise: widget(node, "denoise")?.value || 0.6,
+            }),
+          });
+          const data = await (await api.fetchApi("/sprite_preset/poses")).json();
+          fillCombo(widget(node, "pose"), (data.poses || []).map((p) => p.name), name.trim());
+        });
+        add.serialize = false;
+        moveBefore(node, add, "pose");
+        const poseWidget = widget(node, "pose");
+        const loadSelected = async () => {
+          const data = await (await api.fetchApi("/sprite_preset/poses")).json();
+          const item = (data.poses || []).find((p) => p.name === poseWidget.value);
+          if (!item) return;
+          widget(node, "positive").value = item.positive || "";
+          widget(node, "negative").value = item.negative || "";
+          widget(node, "denoise").value = item.denoise || 0.6;
+        };
+        if (poseWidget) {
+          const old = poseWidget.callback;
+          poseWidget.callback = function () { old?.apply(this, arguments); loadSelected(); };
+        }
+        api.fetchApi("/sprite_preset/poses").then((res) => res.json()).then((data) => {
+          fillCombo(widget(node, "pose"), (data.poses || []).map((p) => p.name), poseWidget?.value);
+        });
+        return r;
+      };
+      return;
+    }
     if (nodeData.name === "SpritePresetSelect") {
       const orig = nodeType.prototype.onNodeCreated;
       nodeType.prototype.onNodeCreated = function () {
