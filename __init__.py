@@ -385,7 +385,7 @@ class SpriteCustomPoses:
                 "negative": ("STRING", {"multiline": True, "default": ""}),
                 "denoise": ("FLOAT", {"default": 0.86, "min": 0.0, "max": 1.0, "step": 0.01}),
                 "use_reference": ("BOOLEAN", {"default": False}),
-                "reference_image": (["none"] + reference_images(), {"default": "none"}),
+                "reference_image": ("STRING", {"default": "none"}),
                 "width": ("INT", {"default": 1560, "min": 512, "max": 2048, "step": 8}),
                 "height": ("INT", {"default": 1560, "min": 512, "max": 2048, "step": 8}),
                 "noise_index": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
