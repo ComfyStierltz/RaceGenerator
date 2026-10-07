@@ -3,7 +3,8 @@
   "poses": [
     {
       "name": "01 front",
-      "positive": "Sprite-base plate, camera locked, character centered and small in the frame. Wide full-body shot. Empty green margin on all four sides. Top of the head below the top edge, both feet above the bottom edge. Standing upright facing the camera, front view, arms relaxed at sides, both feet flat, soft closed-mouth smile, eyes looking at the camera."
+      "positive": "Sprite-base plate, camera locked far back. Wide full-body shot, character small in the frame. Empty green margin on all four sides, large empty margin below the feet. Top of the head well below the top edge. Both feet and all toes well above the bottom edge. Standing upright facing the camera, front view, arms relaxed at sides, both feet flat on the floor, soft closed-mouth smile, eyes looking at the camera. Entire body visible, not a portrait, not cropped at hips or thighs.",
+      "negative": "cropped at hips, cropped at thighs, missing legs, missing feet, portrait, medium shot, close-up"
     },
     {
       "name": "02 three-quarter left",
