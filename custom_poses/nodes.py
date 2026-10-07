@@ -51,6 +51,18 @@ def encode(clip, text):
     return clip.encode_from_tokens_scheduled(clip.tokenize(text or ""))
 
 
+def load_reference(name):
+    import folder_paths
+    from PIL import Image
+    import numpy as np
+    if not name or name == "none":
+        return None
+    path = folder_paths.get_annotated_filepath(name)
+    image = Image.open(path).convert("RGB")
+    arr = np.array(image).astype("float32") / 255.0
+    return torch.from_numpy(arr).unsqueeze(0)
+
+
 def pose_latent(vae, shared, image, width, height):
     if image is None and not width and not height:
         return shared
@@ -69,6 +81,8 @@ def pose_latent(vae, shared, image, width, height):
 class SpriteCustomPoses:
     @classmethod
     def INPUT_TYPES(cls):
+        import folder_paths
+        files = ["none"] + folder_paths.get_filename_list("input")
         return {
             "required": {
                 "model": ("MODEL",),
@@ -85,14 +99,14 @@ class SpriteCustomPoses:
                 "width": ("INT", {"default": 0, "min": 0, "max": 4096, "step": 16}),
                 "height": ("INT", {"default": 0, "min": 0, "max": 4096, "step": 16}),
                 "denoise": ("FLOAT", {"default": 0.8, "min": 0.0, "max": 1.0}),
-                "reference_name": ("STRING", {"default": ""}),
+                "reference_name": (["none"], {"default": "none"}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xFFFFFFFFFFFFFFFF}),
                 "steps": ("INT", {"default": 10, "min": 1, "max": 40}),
                 "cfg": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 20.0}),
                 "sampler_name": (comfy.samplers.KSampler.SAMPLERS, {"default": "euler_ancestral"}),
                 "scheduler": (comfy.samplers.KSampler.SCHEDULERS, {"default": "beta"}),
             },
-            "optional": {"reference_image": ("IMAGE",)},
+            "optional": {},
         }
 
     RETURN_TYPES = ("IMAGE",)
@@ -101,7 +115,7 @@ class SpriteCustomPoses:
     CATEGORY = "sprite"
     OUTPUT_NODE = True
 
-    def run(self, model, clip, vae, latent, anatomy, clothes, selected_pose, shared_negative, editing_pose, positive, pose_negative, width, height, denoise, reference_name, seed, steps, cfg, sampler_name, scheduler, reference_image=None):
+    def run(self, model, clip, vae, latent, anatomy, clothes, selected_pose, shared_negative, editing_pose, positive, pose_negative, width, height, denoise, reference_name, seed, steps, cfg, sampler_name, scheduler):
         import folder_paths
         from pathlib import Path
         from PIL import Image
@@ -123,7 +137,7 @@ class SpriteCustomPoses:
         out = Path(folder_paths.get_output_directory()) / "sprites"
         out.mkdir(parents=True, exist_ok=True)
         for index, item in enumerate(chosen):
-            ref = reference_image if item.get("reference") else None
+            ref = load_reference(item.get("reference"))
             pose_width = int(item.get("width") or 0)
             pose_height = int(item.get("height") or 0)
             current = pose_latent(vae, latent, ref, pose_width, pose_height)

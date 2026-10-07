@@ -10,6 +10,6 @@ from .custom_poses.nodes import NODE_DISPLAY_NAME_MAPPINGS as CUSTOM_NAMES
 NODE_CLASS_MAPPINGS = {**RACE_NODES, **POSE_NODES, **STANDARD_NODES, **CUSTOM_NODES}
 NODE_DISPLAY_NAME_MAPPINGS = {**RACE_NAMES, **POSE_NAMES, **STANDARD_NAMES, **CUSTOM_NAMES}
 WEB_DIRECTORY = "./web"
-print("[RaceGenerator] 0.8.1 rear and squat")
+print("[RaceGenerator] 0.8.2 pose reference file")
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS", "WEB_DIRECTORY"]
