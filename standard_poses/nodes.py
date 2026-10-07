@@ -74,7 +74,11 @@ class SpriteStandardPoses:
                 "sampler_name": (comfy.samplers.KSampler.SAMPLERS, {"default": "euler_ancestral"}),
                 "scheduler": (comfy.samplers.KSampler.SCHEDULERS, {"default": "beta"}),
                 "denoise": ("FLOAT", {"default": 0.55, "min": 0.0, "max": 1.0}),
-            }
+            },
+            "optional": {
+                "gen_width": ("INT", {"default": 2080, "min": 512, "max": 4096, "step": 16, "forceInput": True}),
+                "gen_height": ("INT", {"default": 3120, "min": 512, "max": 4096, "step": 16, "forceInput": True}),
+            },
         }
 
     RETURN_TYPES = ("IMAGE",)
@@ -83,7 +87,7 @@ class SpriteStandardPoses:
     CATEGORY = "sprite"
     OUTPUT_NODE = True
 
-    def run(self, model, clip, vae, latent, anatomy, clothes, selected_pose, editing_pose, positive, pose_negative, shared_negative, seed, steps, cfg, sampler_name, scheduler, denoise):
+    def run(self, model, clip, vae, latent, anatomy, clothes, selected_pose, editing_pose, positive, pose_negative, shared_negative, seed, steps, cfg, sampler_name, scheduler, denoise, gen_width=2080, gen_height=3120):
         import folder_paths
         from pathlib import Path
         from PIL import Image

@@ -75,16 +75,12 @@ def load_reference(name):
 def pose_latent(vae, shared, image, width, height):
     if image is None and not width and not height:
         return shared
-    if image is None:
-        canvas = torch.zeros((1, height or 3120, width or 2080, 3))
-        canvas[:, :, :, 1] = 1
-        image = canvas
-    else:
+    canvas = torch.zeros((1, height or 3120, width or 2080, 3))
+    if image is not None:
         image = as_image(image)
-        if width and height:
-            scaled = torch.nn.functional.interpolate(image.permute(0, 3, 1, 2), size=(height, width), mode="area")
-            image = scaled.permute(0, 2, 3, 1)
-    return {"samples": vae.encode(image[:, :, :, :3])}
+        scaled = torch.nn.functional.interpolate(image.permute(0, 3, 1, 2), size=(canvas.shape[1], canvas.shape[2]), mode="area")
+        canvas = scaled.permute(0, 2, 3, 1)
+    return {"samples": vae.encode(canvas[:, :, :, :3])}
 
 
 class SpriteCustomPoses:
@@ -114,7 +110,10 @@ class SpriteCustomPoses:
                 "sampler_name": (comfy.samplers.KSampler.SAMPLERS, {"default": "euler_ancestral"}),
                 "scheduler": (comfy.samplers.KSampler.SCHEDULERS, {"default": "beta"}),
             },
-            "optional": {},
+            "optional": {
+                "gen_width": ("INT", {"default": 2080, "min": 512, "max": 4096, "step": 16, "forceInput": True}),
+                "gen_height": ("INT", {"default": 3120, "min": 512, "max": 4096, "step": 16, "forceInput": True}),
+            },
         }
 
     RETURN_TYPES = ("IMAGE",)
@@ -123,7 +122,7 @@ class SpriteCustomPoses:
     CATEGORY = "sprite"
     OUTPUT_NODE = True
 
-    def run(self, model, clip, vae, latent, anatomy, clothes, selected_pose, shared_negative, editing_pose, positive, pose_negative, width, height, denoise, reference_name, seed, steps, cfg, sampler_name, scheduler):
+    def run(self, model, clip, vae, latent, anatomy, clothes, selected_pose, shared_negative, editing_pose, positive, pose_negative, width, height, denoise, reference_name, seed, steps, cfg, sampler_name, scheduler, gen_width=2080, gen_height=3120):
         import folder_paths
         from pathlib import Path
         from PIL import Image
@@ -146,8 +145,9 @@ class SpriteCustomPoses:
         out.mkdir(parents=True, exist_ok=True)
         for index, item in enumerate(chosen):
             ref = load_reference(item.get("reference"))
-            pose_width = int(item.get("width") or 0)
-            pose_height = int(item.get("height") or 0)
+            scale = gen_width / 2080
+            pose_width = int(round((int(item.get("width") or gen_width) * scale) / 16) * 16)
+            pose_height = int(round((int(item.get("height") or gen_height) * scale) / 16) * 16)
             current = pose_latent(vae, latent, ref, pose_width, pose_height)
             negative_text = ", ".join(part for part in (shared_negative, item.get("negative") or "") if part and part.strip())
             positive_cond = ConditioningConcat().concat(anatomy_cond, encode(clip, item.get("positive") or positive))[0]
