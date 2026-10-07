@@ -2,20 +2,20 @@
   "poses": [
     {
       "name": "08 squat",
-      "positive": "Wide full-body squat. Entire head and hair below the top edge, large empty margin above the hair. Knees spread wide, both feet visible, hands resting on thighs, not covering the crotch. Character small in the frame.",
-      "negative": "hand covering crotch, palm covering vulva, cropped head, cropped knees, cropped feet",
+      "positive": "Deep squat, front view, natural body proportions, head not tiny, legs not stretched. Knees spread wide and low, both feet flat, hands on the knees, not covering the crotch. Entire body inside the frame, empty margin above the head and beside the knees.",
+      "negative": "stretched body, elongated legs, tiny head, hand covering crotch, palm covering vulva, cropped head, cropped knees, cropped feet",
       "width": 2496,
       "height": 2080,
-      "denoise": 0.86,
+      "denoise": 0.9,
       "reference": ""
     },
     {
       "name": "09 rear",
-      "positive": "Kneeling rear three-quarter view. Back and buttocks face the camera. She looks back over her shoulder. Knees and feet visible. Do not turn the chest to the camera.",
-      "negative": "front view, chest facing camera, breasts facing camera, navel, belly facing camera",
-      "width": 0,
-      "height": 0,
-      "denoise": 0.82,
+      "positive": "Direct rear view, seen from straight behind, not three-quarter, not side view. On hands and knees, bent forward, back and buttocks facing the camera. Head facing away, looking down, not looking back over the shoulder. Both knees and both feet visible.",
+      "negative": "three-quarter view, looking back, looking over shoulder, side view, front view, chest facing camera, face toward camera, sitting upright",
+      "width": 2080,
+      "height": 2080,
+      "denoise": 0.95,
       "reference": ""
     }
   ]

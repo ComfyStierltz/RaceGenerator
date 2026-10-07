@@ -141,9 +141,17 @@ class SpriteCustomPoses:
             torch.cuda.empty_cache()
         small = []
         for frame in frames:
-            preview = torch.nn.functional.interpolate(frame.permute(2, 0, 1).unsqueeze(0), size=(1560, 1040), mode="area")
+            scale = min(1040 / frame.shape[1], 1560 / frame.shape[0], 1)
+            preview = torch.nn.functional.interpolate(frame.permute(2, 0, 1).unsqueeze(0), scale_factor=scale, mode="area")
             small.append(preview[0].permute(1, 2, 0).cpu())
-        return (torch.stack(small, dim=0),)
+        height = max(frame.shape[0] for frame in small)
+        width = max(frame.shape[1] for frame in small)
+        batch = []
+        for frame in small:
+            canvas = torch.zeros((height, width, frame.shape[2]))
+            canvas[:frame.shape[0], :frame.shape[1]] = frame
+            batch.append(canvas)
+        return (torch.stack(batch, dim=0),)
 
 
 if PromptServer is not None:
