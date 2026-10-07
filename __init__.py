@@ -1,6 +1,6 @@
 from .nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
 
 WEB_DIRECTORY = "./web"
-print("[RaceGenerator] 0.6.1 races and clothes")
+print("[RaceGenerator] 0.6.2 pose pick")
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS", "WEB_DIRECTORY"]

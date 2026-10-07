@@ -161,11 +161,71 @@ if PromptServer is not None:
         return web.json_response({"ok": True, "names": clothes_names()})
 
 
+POSES = [
+    "all",
+    "01 front",
+    "02 three-quarter left",
+    "03 profile left",
+    "04 three-quarter back left",
+    "05 back",
+    "06 profile right",
+    "07 three-quarter right",
+    "08 squat",
+    "09 rear",
+]
+
+
+class SpritePosePick:
+    @classmethod
+    def INPUT_TYPES(cls):
+        optional = {f"pose_{i:02d}": ("IMAGE", {"lazy": True}) for i in range(1, 10)}
+        return {"required": {"pose": (POSES, {"default": "all"}), "output_folder": ("STRING", {"default": "sprites"})}, "optional": optional}
+
+    RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("image",)
+    FUNCTION = "run"
+    CATEGORY = "sprite"
+    OUTPUT_NODE = True
+
+    def check_lazy_status(self, pose, output_folder="sprites", **kwargs):
+        needed = range(1, 10) if pose == "all" else [int(pose[:2])]
+        missing = []
+        for i in needed:
+            key = f"pose_{i:02d}"
+            if kwargs.get(key) is None:
+                missing.append(key)
+        return missing
+
+    def run(self, pose, output_folder="sprites", **kwargs):
+        import folder_paths
+        from pathlib import Path
+        from PIL import Image
+        wanted = list(range(1, 10)) if pose == "all" else [int(pose[:2])]
+        names = {i: POSES[i] for i in range(1, 10)}
+        out = Path(folder_paths.get_output_directory()) / (output_folder or "sprites")
+        out.mkdir(parents=True, exist_ok=True)
+        shown = None
+        for i in wanted:
+            image = kwargs.get(f"pose_{i:02d}")
+            if image is None:
+                continue
+            shown = image
+            arr = (image[0].clamp(0, 1).cpu().numpy() * 255).astype("uint8")
+            safe = names[i].replace(" ", "_")
+            Image.fromarray(arr).save(out / f"{safe}.png")
+        if shown is None:
+            import torch
+            shown = torch.zeros((1, 64, 64, 4))
+        return (shown,)
+
+
 NODE_CLASS_MAPPINGS = {
     "SpritePromptPreset": SpritePromptPreset,
     "SpritePresetSelect": SpritePresetSelect,
+    "SpritePosePick": SpritePosePick,
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
     "SpritePromptPreset": "Race and clothes presets",
     "SpritePresetSelect": "Race and clothes select",
+    "SpritePosePick": "Pose pick",
 }
