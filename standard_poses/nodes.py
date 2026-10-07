@@ -117,14 +117,10 @@ class SpriteStandardPoses:
             arr = (image[0].clamp(0, 1).cpu().numpy() * 255).astype("uint8")
             Image.fromarray(arr).save(out / f"{item.get('name', 'pose').replace(' ', '_')}.png")
             print(f"[RaceGenerator] standard pose {item.get('name')} {tuple(image.shape)}")
-        height = max(frame.shape[0] for frame in frames)
-        width = max(frame.shape[1] for frame in frames)
-        batch = []
-        for frame in frames:
-            canvas = torch.zeros((height, width, frame.shape[2]), dtype=frame.dtype, device=frame.device)
-            canvas[:frame.shape[0], :frame.shape[1]] = frame
-            batch.append(canvas)
-        return (torch.stack(batch, dim=0),)
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        print(f"[RaceGenerator] standard poses saved {len(frames)}, preview is the last frame")
+        return (frames[-1].unsqueeze(0).cpu(),)
 
 
 if PromptServer is not None:
