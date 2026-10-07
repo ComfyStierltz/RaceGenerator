@@ -33,6 +33,21 @@ def pose_names():
     return names or ["01 front"]
 
 
+
+def as_image(image):
+    while image.ndim > 4 and image.shape[1] == 1:
+        image = image[:, 0]
+    if image.ndim == 5:
+        image = image[:, 0]
+    if image.ndim == 4 and image.shape[1] in (1, 3, 4) and image.shape[-1] not in (1, 3, 4):
+        image = image.permute(0, 2, 3, 1)
+    if image.ndim == 3:
+        image = image.unsqueeze(0)
+    if image.shape[-1] > 3:
+        image = image[:, :, :, :3]
+    return image.clamp(0, 1)
+
+
 def encode(clip, text):
     return clip.encode_from_tokens_scheduled(clip.tokenize(text or ""))
 
@@ -97,13 +112,11 @@ class SpriteStandardPoses:
             positive_cond = ConditioningConcat().concat(anatomy_cond, encode(clip, item.get("positive") or positive))[0]
             negative_cond = encode(clip, negative_text)
             sampled = common_ksampler(model, seed + index, steps, cfg, sampler_name, scheduler, positive_cond, negative_cond, latent, denoise=denoise)[0]
-            image = vae.decode(sampled["samples"])
-            if image.shape[-1] > 3:
-                image = image[:, :, :, :3]
+            image = as_image(vae.decode(sampled["samples"]))
             frames.append(image[0])
             arr = (image[0].clamp(0, 1).cpu().numpy() * 255).astype("uint8")
             Image.fromarray(arr).save(out / f"{item.get('name', 'pose').replace(' ', '_')}.png")
-            print(f"[RaceGenerator] standard pose {item.get('name')}")
+            print(f"[RaceGenerator] standard pose {item.get('name')} {tuple(image.shape)}")
         height = max(frame.shape[0] for frame in frames)
         width = max(frame.shape[1] for frame in frames)
         batch = []
