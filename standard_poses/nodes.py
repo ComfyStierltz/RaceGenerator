@@ -90,7 +90,7 @@ class SpriteStandardPoses:
         store = load_store()
         poses = store.get("poses") or []
         for item in poses:
-            if item.get("name") == editing_pose:
+            if item.get("name") == editing_pose and positive.strip():
                 item["positive"] = positive
                 item["negative"] = pose_negative
         store["negative"] = shared_negative
@@ -113,14 +113,21 @@ class SpriteStandardPoses:
             negative_cond = encode(clip, negative_text)
             sampled = common_ksampler(model, seed + index, steps, cfg, sampler_name, scheduler, positive_cond, negative_cond, latent, denoise=denoise)[0]
             image = as_image(vae.decode(sampled["samples"]))
-            frames.append(image[0])
-            arr = (image[0].clamp(0, 1).cpu().numpy() * 255).astype("uint8")
-            Image.fromarray(arr).save(out / f"{item.get('name', 'pose').replace(' ', '_')}.png")
-            print(f"[RaceGenerator] standard pose {item.get('name')} {tuple(image.shape)}")
+            frame = image[0]
+            frames.append(frame)
+            arr = (frame.clamp(0, 1).cpu().numpy() * 255).astype("uint8")
+            safe = f"{index + 1:02d}_{item.get('name', 'pose').replace(' ', '_')}.png"
+            Image.fromarray(arr).save(out / safe)
+            print(f"[RaceGenerator] saved {out / safe} {tuple(frame.shape)}")
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
-        print(f"[RaceGenerator] standard poses saved {len(frames)}, preview is the last frame")
-        return (frames[-1].unsqueeze(0).cpu(),)
+        small = []
+        for frame in frames:
+            preview = frame.permute(2, 0, 1).unsqueeze(0)
+            preview = torch.nn.functional.interpolate(preview, size=(1560, 1040), mode="area")
+            small.append(preview[0].permute(1, 2, 0).cpu())
+        print(f"[RaceGenerator] standard poses saved {len(small)} files to {out}")
+        return (torch.stack(small, dim=0),)
 
 
 if PromptServer is not None:
