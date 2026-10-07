@@ -44,28 +44,31 @@ app.registerExtension({
             body: JSON.stringify({
               name: name.trim(),
               positive: widget(node, "positive")?.value || "",
-              negative: widget(node, "negative")?.value || "",
+              negative: widget(node, "pose_negative")?.value || "",
+              shared_negative: widget(node, "shared_negative")?.value || "",
             }),
           });
           const data = await (await api.fetchApi("/sprite_preset/standard_poses")).json();
-          fillCombo(widget(node, "editing_pose"), ["all"].concat((data.poses || []).map((p) => p.name)), name.trim());
+          fillCombo(widget(node, "editing_pose"), (data.poses || []).map((p) => p.name), name.trim());
         });
         add.serialize = false;
         moveBefore(node, add, "editing_pose");
         const poseWidget = widget(node, "editing_pose");
         const loadSelected = async () => {
           const data = await (await api.fetchApi("/sprite_preset/standard_poses")).json();
-          if (widget(node, "negative") && data.negative) widget(node, "negative").value = data.negative;
+          if (widget(node, "shared_negative") && data.negative) widget(node, "shared_negative").value = data.negative;
           const item = (data.poses || []).find((p) => p.name === poseWidget.value);
-          if (item && widget(node, "positive")) widget(node, "positive").value = item.positive || "";
+          if (!item) return;
+          if (widget(node, "positive")) widget(node, "positive").value = item.positive || "";
+          if (widget(node, "pose_negative")) widget(node, "pose_negative").value = item.negative || "";
         };
         if (poseWidget) {
           const old = poseWidget.callback;
           poseWidget.callback = function () { old?.apply(this, arguments); loadSelected(); };
         }
         api.fetchApi("/sprite_preset/standard_poses").then((res) => res.json()).then((data) => {
-          fillCombo(widget(node, "editing_pose"), ["all"].concat((data.poses || []).map((p) => p.name)), poseWidget?.value);
-          if (widget(node, "negative") && data.negative) widget(node, "negative").value = data.negative;
+          fillCombo(widget(node, "editing_pose"), (data.poses || []).map((p) => p.name), poseWidget?.value);
+          if (widget(node, "shared_negative") && data.negative) widget(node, "shared_negative").value = data.negative;
         });
         return r;
       };
