@@ -1,4 +1,4 @@
 [project]
 name = "sprite-prompt-preset"
-version = "0.3.0"
+version = "0.6.1"
 description = "Race and clothes presets for the sprite workflow"
