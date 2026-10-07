@@ -25,8 +25,8 @@ class SpritePosePick:
             "optional": optional,
         }
 
-    RETURN_TYPES = ("IMAGE",)
-    RETURN_NAMES = ("images",)
+    RETURN_TYPES = ("IMAGE", "STRING")
+    RETURN_NAMES = ("images", "selected_pose")
     FUNCTION = "run"
     CATEGORY = "sprite"
     OUTPUT_NODE = True
@@ -36,11 +36,14 @@ class SpritePosePick:
             "pose_01": pose_01, "pose_02": pose_02, "pose_03": pose_03, "pose_04": pose_04,
             "pose_05": pose_05, "pose_06": pose_06, "pose_07": pose_07, "pose_08": pose_08, "pose_09": pose_09,
         }
+        custom = {"08 custom squat": "pose_08", "09 custom rear": "pose_09"}
         if pose == "all":
-            missing = [key for key, value in have.items() if value is None]
-        else:
-            key = POSE_INPUT.get(pose, "pose_01")
+            missing = [key for key in ("pose_08", "pose_09") if have.get(key) is None]
+        elif pose in custom:
+            key = custom[pose]
             missing = [key] if have.get(key) is None else []
+        else:
+            missing = []
         if missing:
             print(f"[RaceGenerator] pose pick requests only {missing}")
         return missing
@@ -68,7 +71,7 @@ class SpritePosePick:
             frames.append(image[0])
         print(f"[RaceGenerator] pose pick saved {len(frames)} of requested {wanted}")
         if not frames:
-            return (torch.zeros((1, 64, 64, 4)),)
+            return (torch.zeros((1, 64, 64, 4)), pose)
         height = max(frame.shape[0] for frame in frames)
         width = max(frame.shape[1] for frame in frames)
         channels = max(frame.shape[2] for frame in frames)
@@ -77,7 +80,7 @@ class SpritePosePick:
             canvas = torch.zeros((height, width, channels), dtype=frame.dtype, device=frame.device)
             canvas[:frame.shape[0], :frame.shape[1], :frame.shape[2]] = frame
             batch.append(canvas)
-        return (torch.stack(batch, dim=0),)
+        return (torch.stack(batch, dim=0), pose)
 
 
 NODE_CLASS_MAPPINGS = {"SpritePosePick": SpritePosePick}

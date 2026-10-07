@@ -29,6 +29,48 @@ function fillCombo(w, names, selected) {
 app.registerExtension({
   name: "sprite.promptpreset",
   async beforeRegisterNodeDef(nodeType, nodeData) {
+
+    if (nodeData.name === "SpriteStandardPoses") {
+      const orig = nodeType.prototype.onNodeCreated;
+      nodeType.prototype.onNodeCreated = function () {
+        const r = orig?.apply(this, arguments);
+        const node = this;
+        const add = node.addWidget("button", "add pose", null, async () => {
+          const name = prompt("Pose name", "");
+          if (!name || !name.trim() || name.trim() === "all") return;
+          await api.fetchApi("/sprite_preset/save_standard_pose", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: name.trim(),
+              positive: widget(node, "positive")?.value || "",
+              negative: widget(node, "negative")?.value || "",
+            }),
+          });
+          const data = await (await api.fetchApi("/sprite_preset/standard_poses")).json();
+          fillCombo(widget(node, "editing_pose"), ["all"].concat((data.poses || []).map((p) => p.name)), name.trim());
+        });
+        add.serialize = false;
+        moveBefore(node, add, "editing_pose");
+        const poseWidget = widget(node, "editing_pose");
+        const loadSelected = async () => {
+          const data = await (await api.fetchApi("/sprite_preset/standard_poses")).json();
+          if (widget(node, "negative") && data.negative) widget(node, "negative").value = data.negative;
+          const item = (data.poses || []).find((p) => p.name === poseWidget.value);
+          if (item && widget(node, "positive")) widget(node, "positive").value = item.positive || "";
+        };
+        if (poseWidget) {
+          const old = poseWidget.callback;
+          poseWidget.callback = function () { old?.apply(this, arguments); loadSelected(); };
+        }
+        api.fetchApi("/sprite_preset/standard_poses").then((res) => res.json()).then((data) => {
+          fillCombo(widget(node, "editing_pose"), ["all"].concat((data.poses || []).map((p) => p.name)), poseWidget?.value);
+          if (widget(node, "negative") && data.negative) widget(node, "negative").value = data.negative;
+        });
+        return r;
+      };
+      return;
+    }
     if (nodeData.name === "SpritePresetSelect") {
       const orig = nodeType.prototype.onNodeCreated;
       nodeType.prototype.onNodeCreated = function () {

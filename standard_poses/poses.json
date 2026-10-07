@@ -1,0 +1,33 @@
+{
+  "negative": "cropped, cut off head, cut off feet, top of head cut off, feet cut off, close-up, tight framing, different person, different face, child, text, watermark, tattoo, extra nipple, small breasts, perky breasts, lifted breasts, short breasts, furniture, shelf, chair, platform, floating, multiple people, extra limbs, extra arms, extra legs, fused feet, tongue out, head touching top edge, hair cut by frame, feet touching bottom edge, toes cut off, soles cut off, thighs cut off, knees cut off, cropped at hips, hand covering crotch, palm covering vulva",
+  "poses": [
+    {
+      "name": "01 front",
+      "positive": "Sprite-base plate, camera locked, character centered and small in the frame. Wide full-body shot. Empty green margin on all four sides. Top of the head below the top edge, both feet above the bottom edge. Standing upright facing the camera, front view, arms relaxed at sides, both feet flat, soft closed-mouth smile, eyes looking at the camera."
+    },
+    {
+      "name": "02 three-quarter left",
+      "positive": "Sprite-base plate, camera locked, character centered and small in the frame. Wide full-body shot. Empty green margin on all four sides. Standing upright, body turned 45 degrees to her left, three-quarter front view, face visible, eyes toward the camera, arms at sides, both feet flat."
+    },
+    {
+      "name": "03 profile left",
+      "positive": "Sprite-base plate, camera locked, character centered and small in the frame. Wide full-body shot. Empty green margin on all four sides. Standing upright in exact left profile, facing the left edge, arms at sides, both feet flat."
+    },
+    {
+      "name": "04 three-quarter back left",
+      "positive": "Sprite-base plate, camera locked, character centered and small in the frame. Wide full-body shot. Empty green margin on all four sides. Standing upright, three-quarter rear view from her left. Back and left shoulder face the camera. Arms at sides, both feet flat. Do not turn the chest to the camera."
+    },
+    {
+      "name": "05 back",
+      "positive": "Sprite-base plate, camera locked, character centered and small in the frame. Wide full-body shot. Empty green margin on all four sides. Strict rear view. Back fully to the camera, shoulder blades and spine visible. Arms at sides, both feet flat. Do not turn the chest to the camera."
+    },
+    {
+      "name": "06 profile right",
+      "positive": "Sprite-base plate, camera locked, character centered and small in the frame. Wide full-body shot. Empty green margin on all four sides. Standing upright in exact right profile, facing the right edge, arms at sides, both feet flat."
+    },
+    {
+      "name": "07 three-quarter right",
+      "positive": "Sprite-base plate, camera locked, character centered and small in the frame. Wide full-body shot. Empty green margin on all four sides. Standing upright, body turned 45 degrees to her right, three-quarter front view, face visible, eyes toward the camera, arms at sides, both feet flat."
+    }
+  ]
+}
