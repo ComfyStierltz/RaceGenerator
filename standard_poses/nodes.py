@@ -95,8 +95,8 @@ class SpriteStandardPoses:
             positive_cond = ConditioningConcat().concat(anatomy_cond, pose_cond)[0]
             sampled = common_ksampler(model, seed + index, steps, cfg, sampler_name, scheduler, positive_cond, negative_cond, latent, denoise=denoise)[0]
             image = vae.decode(sampled["samples"])
-            cleaned = common_ksampler(model, seed + 100 + index, 8, cfg, sampler_name, scheduler, positive_cond, negative_cond, {"samples": vae.encode(image)}, denoise=clean_denoise)[0]
-            image = vae.decode(cleaned["samples"])
+            if image.shape[-1] > 3:
+                image = image[:, :, :, :3]
             frames.append(image[0])
             arr = (image[0].clamp(0, 1).cpu().numpy() * 255).astype("uint8")
             Image.fromarray(arr).save(out / f"{item.get('name', 'pose').replace(' ', '_')}.png")
