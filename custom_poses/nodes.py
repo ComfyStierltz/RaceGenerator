@@ -51,13 +51,22 @@ def encode(clip, text):
     return clip.encode_from_tokens_scheduled(clip.tokenize(text or ""))
 
 
+def input_files():
+    import folder_paths
+    folder = folder_paths.get_input_directory()
+    names = ["none"]
+    if os.path.isdir(folder):
+        names += sorted(name for name in os.listdir(folder) if name.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".bmp")))
+    return names
+
+
 def load_reference(name):
     import folder_paths
     from PIL import Image
     import numpy as np
     if not name or name == "none":
         return None
-    path = folder_paths.get_annotated_filepath(name)
+    path = os.path.join(folder_paths.get_input_directory(), name)
     image = Image.open(path).convert("RGB")
     arr = np.array(image).astype("float32") / 255.0
     return torch.from_numpy(arr).unsqueeze(0)
@@ -81,8 +90,7 @@ def pose_latent(vae, shared, image, width, height):
 class SpriteCustomPoses:
     @classmethod
     def INPUT_TYPES(cls):
-        import folder_paths
-        files = ["none"] + folder_paths.get_filename_list("input")
+        files = input_files()
         return {
             "required": {
                 "model": ("MODEL",),
