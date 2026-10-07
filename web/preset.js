@@ -74,6 +74,56 @@ app.registerExtension({
       };
       return;
     }
+
+    if (nodeData.name === "SpriteCustomPoses") {
+      const orig = nodeType.prototype.onNodeCreated;
+      nodeType.prototype.onNodeCreated = function () {
+        const r = orig?.apply(this, arguments);
+        const node = this;
+        const add = node.addWidget("button", "add pose", null, async () => {
+          const name = prompt("Pose name", "");
+          if (!name || !name.trim()) return;
+          await api.fetchApi("/sprite_preset/save_custom_pose", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: name.trim(),
+              positive: widget(node, "positive")?.value || "",
+              negative: widget(node, "pose_negative")?.value || "",
+              width: widget(node, "width")?.value || 0,
+              height: widget(node, "height")?.value || 0,
+              denoise: widget(node, "denoise")?.value || 0.8,
+              reference: widget(node, "reference_name")?.value || "",
+            }),
+          });
+          const data = await (await api.fetchApi("/sprite_preset/custom_poses")).json();
+          fillCombo(widget(node, "editing_pose"), (data.poses || []).map((p) => p.name), name.trim());
+        });
+        add.serialize = false;
+        moveBefore(node, add, "editing_pose");
+        const poseWidget = widget(node, "editing_pose");
+        const loadSelected = async () => {
+          const data = await (await api.fetchApi("/sprite_preset/custom_poses")).json();
+          const item = (data.poses || []).find((p) => p.name === poseWidget.value);
+          if (!item) return;
+          if (widget(node, "positive")) widget(node, "positive").value = item.positive || "";
+          if (widget(node, "pose_negative")) widget(node, "pose_negative").value = item.negative || "";
+          if (widget(node, "width")) widget(node, "width").value = item.width || 0;
+          if (widget(node, "height")) widget(node, "height").value = item.height || 0;
+          if (widget(node, "denoise")) widget(node, "denoise").value = item.denoise || 0.8;
+          if (widget(node, "reference_name")) widget(node, "reference_name").value = item.reference || "";
+        };
+        if (poseWidget) {
+          const old = poseWidget.callback;
+          poseWidget.callback = function () { old?.apply(this, arguments); loadSelected(); };
+        }
+        api.fetchApi("/sprite_preset/custom_poses").then((res) => res.json()).then((data) => {
+          fillCombo(widget(node, "editing_pose"), (data.poses || []).map((p) => p.name), poseWidget?.value);
+        });
+        return r;
+      };
+      return;
+    }
     if (nodeData.name === "SpritePresetSelect") {
       const orig = nodeType.prototype.onNodeCreated;
       nodeType.prototype.onNodeCreated = function () {

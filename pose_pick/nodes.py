@@ -36,14 +36,7 @@ class SpritePosePick:
             "pose_01": pose_01, "pose_02": pose_02, "pose_03": pose_03, "pose_04": pose_04,
             "pose_05": pose_05, "pose_06": pose_06, "pose_07": pose_07, "pose_08": pose_08, "pose_09": pose_09,
         }
-        custom = {"08 custom squat": "pose_08", "09 custom rear": "pose_09"}
-        if pose == "all":
-            missing = [key for key in ("pose_08", "pose_09") if have.get(key) is None]
-        elif pose in custom:
-            key = custom[pose]
-            missing = [key] if have.get(key) is None else []
-        else:
-            missing = []
+        missing = []
         if missing:
             print(f"[RaceGenerator] pose pick requests only {missing}")
         return missing
