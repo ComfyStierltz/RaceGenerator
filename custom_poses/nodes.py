@@ -42,7 +42,7 @@ def load_reference(name, width, height):
     from PIL import Image
     import numpy as np
     if not name or name == "none":
-        return torch.zeros((1, 64, 64, 3)), False
+        return torch.zeros((1, height, width, 3)), True
     image = Image.open(os.path.join(folder_paths.get_input_directory(), name)).convert("RGB")
     arr = torch.from_numpy(np.array(image).astype("float32") / 255.0).unsqueeze(0)
     scaled = torch.nn.functional.interpolate(arr.permute(0, 3, 1, 2), size=(height, width), mode="area")
