@@ -1,4 +1,10 @@
 import json, os
+from aiohttp import web
+try:
+    from server import PromptServer
+except Exception:
+    PromptServer = None
+
 PACK = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 POSE_FILE = os.path.join(PACK, "custom_poses", "poses.json")
 
@@ -38,17 +44,18 @@ class SpriteCustomPoses:
             "height": ("INT", {"default": 2080, "min": 512, "max": 4096, "step": 16}),
             "denoise": ("FLOAT", {"default": 0.9, "min": 0.0, "max": 1.0, "step": 0.01}),
             "reference": (input_files(), {"default": "none", "image_upload": True}),
+            "use_reference": ("BOOLEAN", {"default": False}),
         }}
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("pose_names",)
     FUNCTION = "run"
     OUTPUT_NODE = True
     CATEGORY = "sprite"
-    def run(self, editing_pose, positive, pose_negative, width, height, denoise, reference):
+    def run(self, editing_pose, positive, pose_negative, width, height, denoise, reference, use_reference):
         store = load_store()
         poses = store.get("poses") or []
         for item in poses:
-            if item.get("name") == editing_pose and positive.strip():
+            if item.get("name") == editing_pose:
                 item.update({
                     "positive": positive,
                     "negative": pose_negative,
@@ -56,14 +63,20 @@ class SpriteCustomPoses:
                     "height": int(height),
                     "denoise": float(denoise),
                     "reference": reference or "none",
+                    "use_reference": bool(use_reference),
                 })
         save_store(store)
-        current = next((item for item in poses if item.get("name") == editing_pose), {})
-        shown = current.get("reference") or reference or "none"
         images = []
-        if shown not in ("none", ""):
-            images = [{"filename": os.path.basename(shown), "subfolder": "RaceGenerator/poses", "type": "input"}]
+        if use_reference and reference not in ("none", ""):
+            images = [{"filename": os.path.basename(reference), "subfolder": "RaceGenerator/poses", "type": "input"}]
         return {"ui": {"images": images}, "result": ("\n".join(item.get("name") or "" for item in poses),)}
+
+if PromptServer is not None:
+    @PromptServer.instance.routes.get("/racegenerator/custom_pose")
+    async def custom_pose(request):
+        name = request.query.get("name", "")
+        item = next((row for row in load_store().get("poses", []) if row.get("name") == name), {})
+        return web.json_response(item)
 
 NODE_CLASS_MAPPINGS = {"SpriteCustomPoses": SpriteCustomPoses}
 NODE_DISPLAY_NAME_MAPPINGS = {"SpriteCustomPoses": "Custom poses"}

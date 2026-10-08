@@ -59,9 +59,10 @@ class SpritePoseStep:
         scale = gen_width / 2080
         width = int(round((int(item.get("width") or gen_width) * scale) / 16) * 16)
         height = int(round((int(item.get("height") or gen_height) * scale) / 16) * 16)
-        image, used = plate(item.get("reference"), width, height)
-        print(f"[RaceGenerator] step {loop_index} custom {item.get('name')} {width}x{height}")
-        return (item.get("positive") or "", item.get("negative") or "", float(item.get("denoise") or 0.9), image, used, width, height)
+        use = bool(item.get("use_reference")) and item.get("reference") not in (None, "", "none")
+        image, used = plate(item.get("reference"), width, height) if use else (torch.zeros((1, height, width, 3)), False)
+        print(f"[RaceGenerator] step {loop_index} custom {item.get('name')} {width}x{height} reference={use}")
+        return (item.get("positive") or "", item.get("negative") or "", 0.85 if use else 1.0, image, True, width, height)
 
 NODE_CLASS_MAPPINGS = {"SpritePoseStep": SpritePoseStep}
 NODE_DISPLAY_NAME_MAPPINGS = {"SpritePoseStep": "Pose step"}
