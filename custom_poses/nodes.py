@@ -5,8 +5,8 @@ try:
     from server import PromptServer
 except Exception:
     PromptServer = None
-PACK_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-POSE_FILE = os.path.join(PACK_DIR, "custom_poses", "poses.json")
+PACK = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+POSE_FILE = os.path.join(PACK, "custom_poses", "poses.json")
 
 def load_store():
     if not os.path.isfile(POSE_FILE):
@@ -31,17 +31,11 @@ def input_files():
         names += sorted(name for name in os.listdir(folder) if name.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".bmp")))
     return names
 
-def chosen(store, selected):
-    poses = store.get("poses") or []
-    if selected == "all":
-        return poses
-    return [item for item in poses if item.get("name") == selected or selected.startswith((item.get("name") or "")[:2])]
-
 def load_reference(name, width, height):
     import folder_paths
     from PIL import Image
     import numpy as np
-    if not name or name == "none":
+    if not name or name in ("none", ""):
         return torch.zeros((1, height, width, 3)), True
     image = Image.open(os.path.join(folder_paths.get_input_directory(), name)).convert("RGB")
     arr = torch.from_numpy(np.array(image).astype("float32") / 255.0).unsqueeze(0)
@@ -52,8 +46,6 @@ class SpriteCustomPoses:
     @classmethod
     def INPUT_TYPES(cls):
         return {"required": {
-            "selected_pose": ("STRING", {"forceInput": True}),
-            "loop_index": ("INT", {"default": 0, "min": 0, "max": 100, "forceInput": True}),
             "editing_pose": (pose_names(), {"default": pose_names()[0]}),
             "positive": ("STRING", {"multiline": True, "default": ""}),
             "pose_negative": ("STRING", {"multiline": True, "default": ""}),
@@ -61,51 +53,52 @@ class SpriteCustomPoses:
             "height": ("INT", {"default": 0, "min": 0, "max": 4096, "step": 16}),
             "denoise": ("FLOAT", {"default": 0.8, "min": 0.0, "max": 1.0}),
             "reference_name": (input_files(), {"default": "none"}),
-        }, "optional": {
-            "gen_width": ("INT", {"default": 2080, "min": 512, "max": 4096, "step": 16, "forceInput": True}),
-            "gen_height": ("INT", {"default": 3120, "min": 512, "max": 4096, "step": 16, "forceInput": True}),
         }}
-    RETURN_TYPES = ("STRING", "STRING", "STRING", "FLOAT", "IMAGE", "BOOLEAN")
-    RETURN_NAMES = ("pose_names", "positive", "negative", "denoise", "reference", "use_reference")
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("pose_names",)
     FUNCTION = "run"
     CATEGORY = "sprite"
-
-    def run(self, selected_pose, loop_index, editing_pose, positive, pose_negative, width, height, denoise, reference_name, gen_width=2080, gen_height=3120):
+    def run(self, editing_pose, positive, pose_negative, width, height, denoise, reference_name):
         store = load_store()
         poses = store.get("poses") or []
         for item in poses:
             if item.get("name") == editing_pose and positive.strip():
-                item.update({"positive": positive, "negative": pose_negative, "width": width, "height": height, "denoise": denoise, "reference": reference_name})
+                item.update({"positive": positive, "negative": pose_negative, "width": width, "height": height, "denoise": denoise, "reference": reference_name or "none"})
         save_store(store)
-        items = chosen(store, selected_pose)
-        names = "\n".join(item.get("name") or "" for item in poses)
-        if not items:
-            return (names, "", "", denoise, torch.zeros((1, 64, 64, 3)), False)
-        item = items[min(loop_index, len(items) - 1)]
+        return ("\n".join(item.get("name") or "" for item in poses),)
+
+class SpriteCustomPrompt:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {
+            "selected_pose": ("STRING", {"forceInput": True}),
+            "loop_index": ("INT", {"default": 0, "min": 0, "max": 100, "forceInput": True}),
+        }, "optional": {
+            "gen_width": ("INT", {"default": 2080, "min": 512, "max": 4096, "step": 16, "forceInput": True}),
+            "gen_height": ("INT", {"default": 3120, "min": 512, "max": 4096, "step": 16, "forceInput": True}),
+        }}
+    RETURN_TYPES = ("STRING", "STRING", "FLOAT", "IMAGE", "BOOLEAN", "BOOLEAN")
+    RETURN_NAMES = ("positive", "negative", "denoise", "reference", "use_reference", "active")
+    FUNCTION = "run"
+    CATEGORY = "sprite"
+    def run(self, selected_pose, loop_index, gen_width=2080, gen_height=3120):
+        store = load_store()
+        poses = store.get("poses") or []
+        if selected_pose == "all":
+            items = poses
+            item = items[min(max(loop_index - 7, 0), len(items) - 1)] if items else {}
+        else:
+            items = [item for item in poses if item.get("name") == selected_pose or selected_pose.startswith((item.get("name") or "")[:2])]
+            item = items[0] if items else {}
+        if not item:
+            return ("", "", 0.8, torch.zeros((1, 64, 64, 3)), False, False)
         scale = gen_width / 2080
         pose_width = int(round((int(item.get("width") or gen_width) * scale) / 16) * 16)
         pose_height = int(round((int(item.get("height") or gen_height) * scale) / 16) * 16)
         image, used = load_reference(item.get("reference"), pose_width, pose_height)
-        print(f"[RaceGenerator] custom prompt {item.get('name')} reference={used}")
-        return (names, item.get("positive") or "", item.get("negative") or "", float(item.get("denoise") or denoise), image, used)
+        print(f"[RaceGenerator] custom {item.get('name')} reference={used}")
+        active = (selected_pose == "all" and loop_index >= 7) or selected_pose.startswith(("08", "09"))
+        return (item.get("positive") or "", item.get("negative") or "", float(item.get("denoise") or 0.8), image, used, active)
 
-if PromptServer is not None:
-    @PromptServer.instance.routes.get("/sprite_preset/custom_poses")
-    async def sprite_custom_poses(request):
-        return web.json_response(load_store())
-    @PromptServer.instance.routes.post("/sprite_preset/save_custom_pose")
-    async def sprite_save_custom_pose(request):
-        data = await request.json()
-        name = (data.get("name") or "").strip()
-        if not name:
-            return web.json_response({"error": "bad name"}, status=400)
-        store = load_store()
-        poses = store.setdefault("poses", [])
-        payload = {"name": name, "positive": data.get("positive") or "", "negative": data.get("negative") or "", "width": int(data.get("width") or 0), "height": int(data.get("height") or 0), "denoise": float(data.get("denoise") or 0.8), "reference": data.get("reference") or "none"}
-        item = next((pose for pose in poses if pose.get("name") == name), None)
-        poses.append(payload) if item is None else item.update(payload)
-        save_store(store)
-        return web.json_response({"ok": True, "names": [pose["name"] for pose in poses]})
-
-NODE_CLASS_MAPPINGS = {"SpriteCustomPoses": SpriteCustomPoses}
-NODE_DISPLAY_NAME_MAPPINGS = {"SpriteCustomPoses": "Custom poses"}
+NODE_CLASS_MAPPINGS = {"SpriteCustomPoses": SpriteCustomPoses, "SpriteCustomPrompt": SpriteCustomPrompt}
+NODE_DISPLAY_NAME_MAPPINGS = {"SpriteCustomPoses": "Custom poses", "SpriteCustomPrompt": "Custom pose prompt"}
