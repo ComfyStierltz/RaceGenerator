@@ -63,7 +63,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {"SpritePoseStep": "Pose step"}
 class SpriteResolution:
     @classmethod
     def INPUT_TYPES(cls):
-        return {"required": {"high_res": ("BOOLEAN", {"default": True, "forceInput": True})}}
+        return {"required": {"high_res": ("BOOLEAN", {"default": True})}}
     RETURN_TYPES = ("INT", "INT", "INT", "INT")
     RETURN_NAMES = ("gen_width", "gen_height", "save_width", "save_height")
     FUNCTION = "run"
