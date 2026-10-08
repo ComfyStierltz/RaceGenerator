@@ -2,21 +2,23 @@
   "poses": [
     {
       "name": "08 squat",
-      "positive": "deep squat, knees spread wide, feet flat, hands on knees, crotch visible. Wide full-body shot, camera locked, character centered and small in the frame. Entire figure inside the frame: top of the head below the top edge, both feet above the bottom edge, elbows and knees inside the side edges. Empty black margin on all four sides. Not cropped, not a close-up, not a thigh crop.",
-      "negative": "hand covering crotch, standing, cropped head, cropped feet, stretched legs",
+      "positive": "one single adult elf woman, not a row, not twins, not a turnaround sheet. Deep squat, knees spread wide, feet flat, hands on the knees, crotch visible. Wide full-body shot, character small in the frame, head below the top edge, both feet above the bottom edge, empty black margin.",
+      "negative": "hand covering crotch, standing, cropped, three people, twins, turnaround sheet, row of characters",
       "width": 2496,
       "height": 2080,
       "denoise": 0.9,
-      "reference": "none"
+      "reference": "none",
+      "use_reference": false
     },
     {
       "name": "09 rear",
-      "positive": "bent forward at the waist, true rear view, back to the camera, knees slightly bent, not kneeling upright. Wide full-body shot, camera locked, character centered and small in the frame. Entire figure inside the frame: top of the head below the top edge, both feet above the bottom edge, elbows and knees inside the side edges. Empty black margin on all four sides. Not cropped, not a close-up, not a thigh crop.",
-      "negative": "looking over shoulder, front view, belly, navel, kneeling upright, cropped feet",
+      "positive": "one single adult elf woman, not a row, not twins. Bent forward at the waist, true rear view, back to the camera, knees slightly bent, not kneeling upright. Full body inside the frame, both feet visible, empty black margin.",
+      "negative": "looking over shoulder, front view, belly, kneeling upright, three people, twins, cropped feet",
       "width": 2080,
       "height": 2080,
       "denoise": 0.9,
-      "reference": "none"
+      "reference": "none",
+      "use_reference": false
     }
   ]
 }

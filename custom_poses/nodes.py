@@ -56,13 +56,15 @@ class SpriteCustomPoses:
         poses = store.get("poses") or []
         for item in poses:
             if item.get("name") == editing_pose:
+                if positive.strip():
+                    item["positive"] = positive
+                if pose_negative.strip():
+                    item["negative"] = pose_negative
                 item.update({
-                    "positive": positive,
-                    "negative": pose_negative,
-                    "width": int(width),
-                    "height": int(height),
+                    "width": int(width) or item.get("width") or 2496,
+                    "height": int(height) or item.get("height") or 2080,
                     "denoise": float(denoise),
-                    "reference": reference or "none",
+                    "reference": reference or item.get("reference") or "none",
                     "use_reference": bool(use_reference),
                 })
         save_store(store)
