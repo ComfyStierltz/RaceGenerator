@@ -7,7 +7,6 @@ except Exception:
     PromptServer = None
 PACK_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 POSE_FILE = os.path.join(PACK_DIR, "custom_poses", "poses.json")
-SLOTS = 2
 
 def load_store():
     if not os.path.isfile(POSE_FILE):
@@ -32,6 +31,12 @@ def input_files():
         names += sorted(name for name in os.listdir(folder) if name.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".bmp")))
     return names
 
+def chosen(store, selected):
+    poses = store.get("poses") or []
+    if selected == "all":
+        return poses
+    return [item for item in poses if item.get("name") == selected or selected.startswith((item.get("name") or "")[:2])]
+
 def load_reference(name, width, height):
     import folder_paths
     from PIL import Image
@@ -47,6 +52,8 @@ class SpriteCustomPoses:
     @classmethod
     def INPUT_TYPES(cls):
         return {"required": {
+            "selected_pose": ("STRING", {"forceInput": True}),
+            "loop_index": ("INT", {"default": 0, "min": 0, "max": 100, "forceInput": True}),
             "editing_pose": (pose_names(), {"default": pose_names()[0]}),
             "positive": ("STRING", {"multiline": True, "default": ""}),
             "pose_negative": ("STRING", {"multiline": True, "default": ""}),
@@ -58,27 +65,28 @@ class SpriteCustomPoses:
             "gen_width": ("INT", {"default": 2080, "min": 512, "max": 4096, "step": 16, "forceInput": True}),
             "gen_height": ("INT", {"default": 3120, "min": 512, "max": 4096, "step": 16, "forceInput": True}),
         }}
-    RETURN_TYPES = tuple(["STRING", "STRING", "FLOAT", "IMAGE", "BOOLEAN"] * SLOTS)
-    RETURN_NAMES = tuple(name for i in range(1, SLOTS + 1) for name in (f"pose_{i:02d}_positive", f"pose_{i:02d}_negative", f"pose_{i:02d}_denoise", f"pose_{i:02d}_reference", f"pose_{i:02d}_use_reference"))
+    RETURN_TYPES = ("INT", "STRING", "STRING", "FLOAT", "IMAGE", "BOOLEAN")
+    RETURN_NAMES = ("count", "positive", "negative", "denoise", "reference", "use_reference")
     FUNCTION = "run"
     CATEGORY = "sprite"
 
-    def run(self, editing_pose, positive, pose_negative, width, height, denoise, reference_name, gen_width=2080, gen_height=3120):
+    def run(self, selected_pose, loop_index, editing_pose, positive, pose_negative, width, height, denoise, reference_name, gen_width=2080, gen_height=3120):
         store = load_store()
         poses = store.get("poses") or []
         for item in poses:
             if item.get("name") == editing_pose and positive.strip():
                 item.update({"positive": positive, "negative": pose_negative, "width": width, "height": height, "denoise": denoise, "reference": reference_name})
         save_store(store)
+        items = chosen(store, selected_pose)
+        if not items:
+            return (1, "", "", denoise, torch.zeros((1, 64, 64, 3)), False)
+        item = items[min(loop_index, len(items) - 1)]
         scale = gen_width / 2080
-        out = []
-        for i in range(SLOTS):
-            item = poses[i] if i < len(poses) else {}
-            pose_width = int(round((int(item.get("width") or gen_width) * scale) / 16) * 16)
-            pose_height = int(round((int(item.get("height") or gen_height) * scale) / 16) * 16)
-            image, used = load_reference(item.get("reference"), pose_width, pose_height)
-            out.extend([item.get("positive") or "", item.get("negative") or "", float(item.get("denoise") or denoise), image, used])
-        return tuple(out)
+        pose_width = int(round((int(item.get("width") or gen_width) * scale) / 16) * 16)
+        pose_height = int(round((int(item.get("height") or gen_height) * scale) / 16) * 16)
+        image, used = load_reference(item.get("reference"), pose_width, pose_height)
+        print(f"[RaceGenerator] custom prompt {loop_index + 1}/{len(items)} {item.get('name')} reference={used}")
+        return (len(items), item.get("positive") or "", item.get("negative") or "", float(item.get("denoise") or denoise), image, used)
 
 if PromptServer is not None:
     @PromptServer.instance.routes.get("/sprite_preset/custom_poses")
