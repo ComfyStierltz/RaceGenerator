@@ -14,8 +14,13 @@ def plate(name, width, height):
     from PIL import Image
     import numpy as np
     if not name or name in ("none", ""):
-        return torch.zeros((1, max(height, 64), max(width, 64), 3)), True
-    image = Image.open(os.path.join(folder_paths.get_input_directory(), name)).convert("RGB")
+        return torch.zeros((1, max(height, 64), max(width, 64), 3)), False
+    path = name if os.path.isabs(name) else os.path.join(folder_paths.get_input_directory(), name)
+    if not os.path.isfile(path):
+        path = os.path.join(folder_paths.get_input_directory(), "RaceGenerator", "poses", os.path.basename(name))
+    if not os.path.isfile(path):
+        return torch.zeros((1, max(height, 64), max(width, 64), 3)), False
+    image = Image.open(path).convert("RGB")
     arr = torch.from_numpy(np.array(image).astype("float32") / 255.0).unsqueeze(0)
     scaled = torch.nn.functional.interpolate(arr.permute(0, 3, 1, 2), size=(height, width), mode="area")
     return scaled.permute(0, 2, 3, 1), True

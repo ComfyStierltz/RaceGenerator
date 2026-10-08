@@ -51,6 +51,17 @@ def clothes_names():
     return found
 
 
+
+def race_images():
+    import folder_paths
+    folder = os.path.join(folder_paths.get_input_directory(), "RaceGenerator", "races")
+    os.makedirs(folder, exist_ok=True)
+    names = ["none"]
+    for name in sorted(os.listdir(folder)):
+        if name.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".bmp")):
+            names.append(f"RaceGenerator/races/{name}")
+    return names
+
 def load_race(name):
     for file_name in race_files():
         data = read_json(os.path.join(RACE_DIR, file_name))
@@ -95,16 +106,36 @@ class SpritePromptPreset:
                 "negative": ("STRING", {"multiline": True, "default": ""}),
                 "clothes_preset": (clothes_names(), {"default": clothes_names()[0]}),
                 "clothes": ("STRING", {"multiline": True, "default": ""}),
+                "race_reference": (race_images(), {"default": "none", "image_upload": True}),
             }
         }
 
-    RETURN_TYPES = ("STRING", "STRING", "STRING")
-    RETURN_NAMES = ("anatomy", "negative", "clothes")
+    RETURN_TYPES = ("STRING", "STRING", "STRING", "IMAGE")
+    RETURN_NAMES = ("anatomy", "negative", "clothes", "reference")
     FUNCTION = "run"
+    OUTPUT_NODE = True
     CATEGORY = "sprite"
 
-    def run(self, race_preset, anatomy, negative, clothes_preset, clothes):
-        return (anatomy, negative, clothes)
+    def run(self, race_preset, anatomy, negative, clothes_preset, clothes, race_reference="none"):
+        import folder_paths
+        from PIL import Image
+        import numpy as np
+        import torch
+        folder = os.path.join(folder_paths.get_input_directory(), "RaceGenerator", "races")
+        os.makedirs(folder, exist_ok=True)
+        shown = race_reference or "none"
+        images = []
+        if shown not in ("none", ""):
+            path = shown if os.path.isabs(shown) else os.path.join(folder_paths.get_input_directory(), shown)
+            if not os.path.isfile(path):
+                path = os.path.join(folder_paths.get_input_directory(), os.path.basename(shown))
+            if os.path.isfile(path):
+                image = Image.open(path).convert("RGB")
+                arr = torch.from_numpy(np.array(image).astype("float32") / 255.0).unsqueeze(0)
+                images = [{"filename": os.path.basename(path), "subfolder": os.path.relpath(os.path.dirname(path), folder_paths.get_input_directory()), "type": "input"}]
+                return {"ui": {"images": images}, "result": (anatomy, negative, clothes, arr)}
+        blank = torch.zeros((1, 64, 64, 3))
+        return {"ui": {"images": []}, "result": (anatomy, negative, clothes, blank)}
 
 
 class SpritePresetSelect:

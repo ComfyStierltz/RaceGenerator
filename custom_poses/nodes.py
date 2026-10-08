@@ -19,10 +19,12 @@ def pose_names():
 
 def input_files():
     import folder_paths
-    folder = folder_paths.get_input_directory()
+    folder = os.path.join(folder_paths.get_input_directory(), "RaceGenerator", "poses")
+    os.makedirs(folder, exist_ok=True)
     names = ["none"]
-    if os.path.isdir(folder):
-        names += sorted(name for name in os.listdir(folder) if name.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".bmp")))
+    for name in sorted(os.listdir(folder)):
+        if name.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".bmp")):
+            names.append(f"RaceGenerator/poses/{name}")
     return names
 
 class SpriteCustomPoses:
@@ -60,7 +62,7 @@ class SpriteCustomPoses:
         shown = current.get("reference") or reference or "none"
         images = []
         if shown not in ("none", ""):
-            images = [{"filename": shown, "subfolder": "", "type": "input"}]
+            images = [{"filename": os.path.basename(shown), "subfolder": "RaceGenerator/poses", "type": "input"}]
         return {"ui": {"images": images}, "result": ("\n".join(item.get("name") or "" for item in poses),)}
 
 NODE_CLASS_MAPPINGS = {"SpriteCustomPoses": SpriteCustomPoses}
