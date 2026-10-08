@@ -20,8 +20,8 @@ class SpritePosePick:
             "pose": (pose_choices(), {"default": "all"}),
             "standard_poses": ("STRING", {"forceInput": True}),
             "custom_poses": ("STRING", {"forceInput": True}),
-            "high_res": ("BOOLEAN", {"default": True, "forceInput": True}),
-            "clothes_on": ("BOOLEAN", {"default": True, "forceInput": True}),
+            "high_res": ("BOOLEAN", {"default": True}),
+            "clothes_on": ("BOOLEAN", {"default": True}),
         }}
     RETURN_TYPES = ("STRING", "INT", "INT", "INT", "INT", "INT", "BOOLEAN")
     RETURN_NAMES = ("selected_pose", "count", "gen_width", "gen_height", "save_width", "save_height", "clothes_on")
