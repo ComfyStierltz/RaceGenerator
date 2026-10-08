@@ -1,11 +1,7 @@
 import json, os
-from aiohttp import web
-try:
-    from server import PromptServer
-except Exception:
-    PromptServer = None
-PACK = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+PACK = __import__("os").path.dirname(__import__("os").path.dirname(__import__("os").path.realpath(__file__)))
 POSE_FILE = os.path.join(PACK, "standard_poses", "poses.json")
+SLOTS = 7
 
 def load_store():
     if not os.path.isfile(POSE_FILE):
@@ -31,8 +27,8 @@ class SpriteStandardPoses:
             "pose_negative": ("STRING", {"multiline": True, "default": ""}),
             "shared_negative": ("STRING", {"multiline": True, "default": ""}),
         }}
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("pose_names",)
+    RETURN_TYPES = tuple(["STRING"] * (2 + SLOTS))
+    RETURN_NAMES = tuple(["pose_names", "shared_negative"] + [f"pose_{i:02d}_positive" for i in range(1, SLOTS + 1)])
     FUNCTION = "run"
     CATEGORY = "sprite"
     def run(self, editing_pose, positive, pose_negative, shared_negative):
@@ -44,37 +40,13 @@ class SpriteStandardPoses:
                 item["negative"] = pose_negative
         store["negative"] = shared_negative
         save_store(store)
-        return ("\n".join(item.get("name") or "" for item in poses),)
+        texts = []
+        for i in range(SLOTS):
+            item = poses[i] if i < len(poses) else {}
+            extra = ", ".join(part for part in (shared_negative, item.get("negative") or "") if part and part.strip())
+            texts.append(item.get("positive") or "")
+        names = "\n".join(item.get("name") or "" for item in poses)
+        return tuple([names, shared_negative] + texts)
 
-class SpriteStandardPrompt:
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {"required": {
-            "selected_pose": ("STRING", {"forceInput": True}),
-            "loop_index": ("INT", {"default": 0, "min": 0, "max": 100, "forceInput": True}),
-        }}
-    RETURN_TYPES = ("STRING", "STRING")
-    RETURN_NAMES = ("positive", "negative")
-    FUNCTION = "run"
-    CATEGORY = "sprite"
-    def run(self, selected_pose, loop_index):
-        store = load_store()
-        poses = store.get("poses") or []
-        if selected_pose == "all":
-            items = poses
-        else:
-            items = [item for item in poses if item.get("name") == selected_pose or selected_pose.startswith((item.get("name") or "")[:2])]
-        if not items:
-            return ("", store.get("negative") or "")
-        item = items[min(loop_index, len(items) - 1)]
-        negative = ", ".join(part for part in (store.get("negative") or "", item.get("negative") or "") if part and part.strip())
-        print(f"[RaceGenerator] standard {item.get('name')}")
-        return (item.get("positive") or "", negative)
-
-if PromptServer is not None:
-    @PromptServer.instance.routes.get("/sprite_preset/standard_poses")
-    async def sprite_standard_poses(request):
-        return web.json_response(load_store())
-
-NODE_CLASS_MAPPINGS = {"SpriteStandardPoses": SpriteStandardPoses, "SpriteStandardPrompt": SpriteStandardPrompt}
-NODE_DISPLAY_NAME_MAPPINGS = {"SpriteStandardPoses": "Standard poses", "SpriteStandardPrompt": "Standard pose prompt"}
+NODE_CLASS_MAPPINGS = {"SpriteStandardPoses": SpriteStandardPoses}
+NODE_DISPLAY_NAME_MAPPINGS = {"SpriteStandardPoses": "Standard poses"}
