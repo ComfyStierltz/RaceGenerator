@@ -1,33 +1,60 @@
 import json, os
+import torch
 PACK = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
-def load(name):
-    path = os.path.join(PACK, name)
+def load(folder):
+    path = os.path.join(PACK, folder, "poses.json")
     if not os.path.isfile(path):
-        return {"poses": []}
+        return {"negative": "", "poses": []}
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
-def pick(store, selected):
-    poses = store.get("poses") or []
-    if selected == "all":
-        return poses
-    return [item for item in poses if item.get("name") == selected or selected.startswith((item.get("name") or "")[:2])]
+def plate(name, width, height):
+    import folder_paths
+    from PIL import Image
+    import numpy as np
+    if not name or name in ("none", ""):
+        return torch.zeros((1, max(height, 64), max(width, 64), 3)), True
+    image = Image.open(os.path.join(folder_paths.get_input_directory(), name)).convert("RGB")
+    arr = torch.from_numpy(np.array(image).astype("float32") / 255.0).unsqueeze(0)
+    scaled = torch.nn.functional.interpolate(arr.permute(0, 3, 1, 2), size=(height, width), mode="area")
+    return scaled.permute(0, 2, 3, 1), True
 
-class SpritePoseCount:
+class SpritePoseStep:
     @classmethod
     def INPUT_TYPES(cls):
-        return {"required": {"selected_pose": ("STRING", {"forceInput": True})}}
-    RETURN_TYPES = ("INT", "INT")
-    RETURN_NAMES = ("standard_count", "custom_count")
+        return {"required": {
+            "selected_pose": ("STRING", {"forceInput": True}),
+            "loop_index": ("INT", {"default": 0, "min": 0, "max": 100, "forceInput": True}),
+            "gen_width": ("INT", {"default": 2080, "min": 512, "max": 4096, "forceInput": True}),
+            "gen_height": ("INT", {"default": 3120, "min": 512, "max": 4096, "forceInput": True}),
+        }}
+    RETURN_TYPES = ("STRING", "STRING", "FLOAT", "IMAGE", "BOOLEAN")
+    RETURN_NAMES = ("positive", "negative", "denoise", "reference", "use_reference")
     FUNCTION = "run"
     CATEGORY = "sprite"
+    def run(self, selected_pose, loop_index, gen_width, gen_height):
+        standard = load("standard_poses")
+        custom = load("custom_poses")
+        standard_items = standard.get("poses") or []
+        custom_items = custom.get("poses") or []
+        if selected_pose == "all":
+            names = standard_items + custom_items
+            item = names[min(loop_index, len(names) - 1)] if names else {}
+            is_custom = loop_index >= len(standard_items)
+        else:
+            item = next((row for row in standard_items + custom_items if row.get("name") == selected_pose or selected_pose.startswith((row.get("name") or "")[:2])), {})
+            is_custom = item in custom_items
+        if not is_custom:
+            negative = ", ".join(part for part in (standard.get("negative") or "", item.get("negative") or "") if part and part.strip())
+            print(f"[RaceGenerator] step {loop_index} standard {item.get('name')}")
+            return (item.get("positive") or "", negative, 0.55, torch.zeros((1, 64, 64, 3)), False)
+        scale = gen_width / 2080
+        width = int(round((int(item.get("width") or gen_width) * scale) / 16) * 16)
+        height = int(round((int(item.get("height") or gen_height) * scale) / 16) * 16)
+        image, used = plate(item.get("reference"), width, height)
+        print(f"[RaceGenerator] step {loop_index} custom {item.get('name')} reference={used}")
+        return (item.get("positive") or "", item.get("negative") or "", float(item.get("denoise") or 0.8), image, used)
 
-    def run(self, selected_pose):
-        standard = len(pick(load("standard_poses/poses.json"), selected_pose))
-        custom = len(pick(load("custom_poses/poses.json"), selected_pose))
-        print(f"[RaceGenerator] cycle standard={standard} custom={custom} for {selected_pose}")
-        return (max(standard, 1), max(custom, 1))
-
-NODE_CLASS_MAPPINGS = {"SpritePoseCount": SpritePoseCount}
-NODE_DISPLAY_NAME_MAPPINGS = {"SpritePoseCount": "Pose cycle count"}
+NODE_CLASS_MAPPINGS = {"SpritePoseStep": SpritePoseStep}
+NODE_DISPLAY_NAME_MAPPINGS = {"SpritePoseStep": "Pose step"}

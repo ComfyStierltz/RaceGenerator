@@ -11,7 +11,6 @@ from .cycle.nodes import NODE_DISPLAY_NAME_MAPPINGS as CYCLE_NAMES
 
 NODE_CLASS_MAPPINGS = {**RACE_NODES, **POSE_NODES, **STANDARD_NODES, **CUSTOM_NODES, **CYCLE_NODES}
 NODE_DISPLAY_NAME_MAPPINGS = {**RACE_NAMES, **POSE_NAMES, **STANDARD_NAMES, **CUSTOM_NAMES, **CYCLE_NAMES}
-print("[RaceGenerator] 0.9.12 no ui warnings\n", end="")
-print("[RaceGenerator] 0.9.7 pose list cycle")
+print("[RaceGenerator] 0.9.13 one pipeline cycle")
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]
