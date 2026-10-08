@@ -1,14 +1,12 @@
 import json, os
-import torch
 from aiohttp import web
-from nodes import ConditioningConcat, common_ksampler
-import comfy.samplers
 try:
     from server import PromptServer
 except Exception:
     PromptServer = None
 PACK_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 POSE_FILE = os.path.join(PACK_DIR, "standard_poses", "poses.json")
+SLOTS = 7
 
 def load_store():
     if not os.path.isfile(POSE_FILE):
@@ -25,46 +23,21 @@ def pose_names():
     names = [item.get("name") for item in load_store().get("poses", []) if item.get("name")]
     return names or ["01 front"]
 
-def encode(clip, text):
-    return clip.encode_from_tokens_scheduled(clip.tokenize(text or ""))
-
-def as_image(image):
-    if image.ndim == 5:
-        image = image[:, 0]
-    if image.ndim == 4 and image.shape[1] in (1, 3, 4) and image.shape[-1] not in (1, 3, 4):
-        image = image.permute(0, 2, 3, 1)
-    if image.ndim == 3:
-        image = image.unsqueeze(0)
-    return image[:, :, :, :3].clamp(0, 1)
-
 class SpriteStandardPoses:
     @classmethod
     def INPUT_TYPES(cls):
         return {"required": {
-            "model": ("MODEL",), "clip": ("CLIP",), "vae": ("VAE",), "latent": ("LATENT",),
-            "anatomy": ("STRING", {"forceInput": True}), "clothes": ("STRING", {"forceInput": True}),
-            "selected_pose": ("STRING", {"forceInput": True}),
             "editing_pose": (pose_names(), {"default": pose_names()[0]}),
             "positive": ("STRING", {"multiline": True, "default": ""}),
             "pose_negative": ("STRING", {"multiline": True, "default": ""}),
             "shared_negative": ("STRING", {"multiline": True, "default": ""}),
-            "seed": ("INT", {"default": 0, "min": 0, "max": 0xFFFFFFFFFFFFFFFF}),
-            "steps": ("INT", {"default": 10, "min": 1, "max": 40}),
-            "cfg": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 20.0}),
-            "sampler_name": (comfy.samplers.KSampler.SAMPLERS, {"default": "euler_ancestral"}),
-            "scheduler": (comfy.samplers.KSampler.SCHEDULERS, {"default": "beta"}),
-            "denoise": ("FLOAT", {"default": 0.55, "min": 0.0, "max": 1.0}),
         }}
-    RETURN_TYPES = ("IMAGE",)
-    RETURN_NAMES = ("images",)
+    RETURN_TYPES = tuple(["STRING"] * (1 + SLOTS))
+    RETURN_NAMES = tuple(["shared_negative"] + [f"pose_{i:02d}_positive" for i in range(1, SLOTS + 1)])
     FUNCTION = "run"
     CATEGORY = "sprite"
-    OUTPUT_NODE = True
 
-    def run(self, model, clip, vae, latent, anatomy, clothes, selected_pose, editing_pose, positive, pose_negative, shared_negative, seed, steps, cfg, sampler_name, scheduler, denoise):
-        import folder_paths
-        from pathlib import Path
-        from PIL import Image
+    def run(self, editing_pose, positive, pose_negative, shared_negative):
         store = load_store()
         poses = store.get("poses") or []
         for item in poses:
@@ -73,26 +46,11 @@ class SpriteStandardPoses:
                 item["negative"] = pose_negative
         store["negative"] = shared_negative
         save_store(store)
-        if selected_pose == "all":
-            chosen = poses
-        else:
-            chosen = [item for item in poses if item.get("name") == selected_pose or selected_pose.startswith((item.get("name") or "")[:2])]
-        if not chosen:
-            print(f"[RaceGenerator] standard skipped for {selected_pose}")
-            return (torch.zeros((1, 64, 64, 3)),)
-        anatomy_cond = encode(clip, " ".join(part for part in (anatomy, clothes) if part and part.strip()))
-        frames = []
-        out = Path(folder_paths.get_output_directory()) / "sprites"
-        out.mkdir(parents=True, exist_ok=True)
-        for index, item in enumerate(chosen):
-            negative = ", ".join(part for part in (shared_negative, item.get("negative") or "") if part and part.strip())
-            positive_cond = ConditioningConcat().concat(anatomy_cond, encode(clip, item.get("positive") or positive))[0]
-            sampled = common_ksampler(model, seed + index, steps, cfg, sampler_name, scheduler, positive_cond, encode(clip, negative), latent, denoise=denoise)[0]
-            frame = as_image(vae.decode(sampled["samples"]))[0]
-            frames.append(frame)
-            Image.fromarray((frame.clamp(0, 1).cpu().numpy() * 255).astype("uint8")).save(out / f"{index+1:02d}_{item.get('name','pose').replace(' ', '_')}.png")
-            print(f"[RaceGenerator] standard {item.get('name')}")
-        return (torch.stack(frames, 0).cpu(),)
+        texts = []
+        for i in range(SLOTS):
+            item = poses[i] if i < len(poses) else {}
+            texts.append(item.get("positive") or "")
+        return tuple([shared_negative] + texts)
 
 if PromptServer is not None:
     @PromptServer.instance.routes.get("/sprite_preset/standard_poses")

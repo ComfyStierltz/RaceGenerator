@@ -7,8 +7,8 @@ POSES = [
     "05 back",
     "06 profile right",
     "07 three-quarter right",
-    "08 custom squat",
-    "09 custom rear",
+    "08 squat",
+    "09 rear",
 ]
 POSE_INPUT = {pose: f"pose_{i:02d}" for i, pose in enumerate(POSES) if i}
 
@@ -36,7 +36,11 @@ class SpritePosePick:
             "pose_01": pose_01, "pose_02": pose_02, "pose_03": pose_03, "pose_04": pose_04,
             "pose_05": pose_05, "pose_06": pose_06, "pose_07": pose_07, "pose_08": pose_08, "pose_09": pose_09,
         }
-        missing = []
+        if pose == "all":
+            missing = [key for key, value in have.items() if value is None]
+        else:
+            key = POSE_INPUT.get(pose, "pose_01")
+            missing = [key] if have.get(key) is None else []
         if missing:
             print(f"[RaceGenerator] pose pick requests only {missing}")
         return missing
