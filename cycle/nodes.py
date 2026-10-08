@@ -46,10 +46,11 @@ class SpritePoseStep:
             item = next((row for row in standard_items + custom_items if row.get("name") == selected_pose or selected_pose.startswith((row.get("name") or "")[:2])), {})
             is_custom = item in custom_items
         if not is_custom:
+            positive = ", ".join(part for part in (standard.get("shared_positive") or "", item.get("positive") or "") if part and part.strip())
             negative = ", ".join(part for part in (standard.get("negative") or "", item.get("negative") or "") if part and part.strip())
             denoise = 0.5 if loop_index == 0 and selected_pose in ("all", "01 front") else 0.82
             print(f"[RaceGenerator] step {loop_index} standard {item.get('name')} denoise={denoise}")
-            return (item.get("positive") or "", negative, denoise, torch.zeros((1, 64, 64, 3)), False, gen_width, gen_height)
+            return (positive, negative, denoise, torch.zeros((1, 64, 64, 3)), False, gen_width, gen_height)
         scale = gen_width / 2080
         width = int(round((int(item.get("width") or gen_width) * scale) / 16) * 16)
         height = int(round((int(item.get("height") or gen_height) * scale) / 16) * 16)

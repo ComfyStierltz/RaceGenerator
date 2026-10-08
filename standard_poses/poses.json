@@ -1,19 +1,20 @@
 {
-  "negative": "cropped, cut off head, cut off feet, same front pose, facing camera when another angle is requested, back view showing belly, breasts visible from behind, navel visible from behind",
+  "shared_positive": "Wide full-body shot, camera locked, character centered and small in the frame. Entire figure inside the frame: top of the head below the top edge, both feet above the bottom edge, elbows and knees inside the side edges. Empty black margin on all four sides. Not cropped, not a close-up.",
+  "negative": "cropped, cut off head, cut off feet, cut off knees, cut off thighs, head touching the top edge, feet touching the bottom edge, close-up, tight framing, zoomed in, back view showing belly, breasts visible from behind, navel visible from behind",
   "poses": [
     {
       "name": "01 front",
-      "positive": "front view, facing the camera, arms relaxed at the sides, full body",
+      "positive": "front view, facing the camera, arms relaxed at the sides",
       "negative": ""
     },
     {
       "name": "02 three-quarter left",
-      "positive": "three-quarter view, body turned 45 degrees to her left, face still visible, full body",
+      "positive": "three-quarter view, body turned 45 degrees to her left, face still visible",
       "negative": "straight front view"
     },
     {
       "name": "03 profile left",
-      "positive": "strict left profile, nose pointing left, one eye visible, full body",
+      "positive": "strict left profile, nose pointing left, one eye visible",
       "negative": "front view, both eyes visible"
     },
     {
@@ -28,12 +29,12 @@
     },
     {
       "name": "06 profile right",
-      "positive": "strict right profile, nose pointing right, one eye visible, full body",
+      "positive": "strict right profile, nose pointing right, one eye visible",
       "negative": "front view, both eyes visible"
     },
     {
       "name": "07 three-quarter right",
-      "positive": "three-quarter view, body turned 45 degrees to her right, face still visible, full body",
+      "positive": "three-quarter view, body turned 45 degrees to her right, face still visible",
       "negative": "straight front view"
     }
   ]
