@@ -29,8 +29,8 @@ class SpritePoseStep:
             "gen_width": ("INT", {"default": 2080, "min": 512, "max": 4096, "forceInput": True}),
             "gen_height": ("INT", {"default": 3120, "min": 512, "max": 4096, "forceInput": True}),
         }}
-    RETURN_TYPES = ("STRING", "STRING", "FLOAT", "IMAGE", "BOOLEAN")
-    RETURN_NAMES = ("positive", "negative", "denoise", "reference", "use_reference")
+    RETURN_TYPES = ("STRING", "STRING", "FLOAT", "IMAGE", "BOOLEAN", "INT", "INT")
+    RETURN_NAMES = ("positive", "negative", "denoise", "reference", "use_reference", "save_width", "save_height")
     FUNCTION = "run"
     CATEGORY = "sprite"
     def run(self, selected_pose, loop_index, gen_width, gen_height):
@@ -47,14 +47,15 @@ class SpritePoseStep:
             is_custom = item in custom_items
         if not is_custom:
             negative = ", ".join(part for part in (standard.get("negative") or "", item.get("negative") or "") if part and part.strip())
-            print(f"[RaceGenerator] step {loop_index} standard {item.get('name')}")
-            return (item.get("positive") or "", negative, 0.55, torch.zeros((1, 64, 64, 3)), False)
+            denoise = 0.5 if loop_index == 0 and selected_pose in ("all", "01 front") else 0.82
+            print(f"[RaceGenerator] step {loop_index} standard {item.get('name')} denoise={denoise}")
+            return (item.get("positive") or "", negative, denoise, torch.zeros((1, 64, 64, 3)), False, gen_width, gen_height)
         scale = gen_width / 2080
         width = int(round((int(item.get("width") or gen_width) * scale) / 16) * 16)
         height = int(round((int(item.get("height") or gen_height) * scale) / 16) * 16)
         image, used = plate(item.get("reference"), width, height)
-        print(f"[RaceGenerator] step {loop_index} custom {item.get('name')} reference={used}")
-        return (item.get("positive") or "", item.get("negative") or "", float(item.get("denoise") or 0.8), image, used)
+        print(f"[RaceGenerator] step {loop_index} custom {item.get('name')} {width}x{height}")
+        return (item.get("positive") or "", item.get("negative") or "", float(item.get("denoise") or 0.9), image, used, width, height)
 
 NODE_CLASS_MAPPINGS = {"SpritePoseStep": SpritePoseStep}
 NODE_DISPLAY_NAME_MAPPINGS = {"SpritePoseStep": "Pose step"}
