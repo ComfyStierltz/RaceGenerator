@@ -95,9 +95,11 @@ class SpriteCustomPrompt:
         scale = gen_width / 2080
         pose_width = int(round((int(item.get("width") or gen_width) * scale) / 16) * 16)
         pose_height = int(round((int(item.get("height") or gen_height) * scale) / 16) * 16)
+        active = (selected_pose == "all" and loop_index >= 7) or selected_pose.startswith(("08", "09"))
+        if not active:
+            return ("", "", 0.55, torch.zeros((1, 64, 64, 3)), False, False)
         image, used = load_reference(item.get("reference"), pose_width, pose_height)
         print(f"[RaceGenerator] custom {item.get('name')} reference={used}")
-        active = (selected_pose == "all" and loop_index >= 7) or selected_pose.startswith(("08", "09"))
         return (item.get("positive") or "", item.get("negative") or "", float(item.get("denoise") or 0.8), image, used, active)
 
 NODE_CLASS_MAPPINGS = {"SpriteCustomPoses": SpriteCustomPoses, "SpriteCustomPrompt": SpriteCustomPrompt}
