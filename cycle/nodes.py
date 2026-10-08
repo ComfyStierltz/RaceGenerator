@@ -66,16 +66,16 @@ class SpriteResolution:
     @classmethod
     def INPUT_TYPES(cls):
         return {"required": {"high_res": ("BOOLEAN", {"default": True})}}
-    RETURN_TYPES = ("INT", "INT", "INT", "INT")
-    RETURN_NAMES = ("gen_width", "gen_height", "save_width", "save_height")
+    RETURN_TYPES = ("INT", "INT")
+    RETURN_NAMES = ("gen_width", "gen_height")
     FUNCTION = "run"
     CATEGORY = "sprite"
     def run(self, high_res):
         if high_res:
             print("[RaceGenerator] resolution 2080x3120, save 1040x1560")
-            return (2080, 3120, 1040, 1560)
+            return (2080, 3120)
         print("[RaceGenerator] resolution 1040x1560")
-        return (1040, 1560, 1040, 1560)
+        return (1040, 1560)
 
 NODE_CLASS_MAPPINGS["SpriteResolution"] = SpriteResolution
 NODE_DISPLAY_NAME_MAPPINGS["SpriteResolution"] = "Resolution"
