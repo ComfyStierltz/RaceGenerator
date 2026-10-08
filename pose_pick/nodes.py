@@ -36,14 +36,7 @@ class SpritePosePick:
             "pose_01": pose_01, "pose_02": pose_02, "pose_03": pose_03, "pose_04": pose_04,
             "pose_05": pose_05, "pose_06": pose_06, "pose_07": pose_07, "pose_08": pose_08, "pose_09": pose_09,
         }
-        if pose == "all":
-            missing = [key for key, value in have.items() if value is None]
-        else:
-            key = POSE_INPUT.get(pose, "pose_01")
-            missing = [key] if have.get(key) is None else []
-        if missing:
-            print(f"[RaceGenerator] pose pick requests only {missing}")
-        return missing
+        return []
 
     def run(self, pose, output_folder="sprites", pose_01=None, pose_02=None, pose_03=None, pose_04=None, pose_05=None, pose_06=None, pose_07=None, pose_08=None, pose_09=None):
         import folder_paths
