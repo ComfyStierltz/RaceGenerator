@@ -26,7 +26,7 @@ def pose_names():
 def input_files():
     import folder_paths
     folder = folder_paths.get_input_directory()
-    names = ["none"]
+    names = ["none", ""]
     if os.path.isdir(folder):
         names += sorted(name for name in os.listdir(folder) if name.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".bmp")))
     return names
