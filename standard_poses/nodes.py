@@ -39,8 +39,8 @@ class SpriteStandardPoses:
             "pose_negative": ("STRING", {"multiline": True, "default": ""}),
             "shared_negative": ("STRING", {"multiline": True, "default": ""}),
         }}
-    RETURN_TYPES = ("INT", "STRING", "STRING")
-    RETURN_NAMES = ("count", "positive", "negative")
+    RETURN_TYPES = ("STRING", "STRING", "STRING")
+    RETURN_NAMES = ("pose_names", "positive", "negative")
     FUNCTION = "run"
     CATEGORY = "sprite"
 
@@ -54,12 +54,13 @@ class SpriteStandardPoses:
         store["negative"] = shared_negative
         save_store(store)
         items = chosen(store, selected_pose)
+        names = "\n".join(item.get("name") or "" for item in poses)
         if not items:
-            return (1, "", shared_negative)
+            return (names, "", shared_negative)
         item = items[min(loop_index, len(items) - 1)]
         negative = ", ".join(part for part in (shared_negative, item.get("negative") or "") if part and part.strip())
-        print(f"[RaceGenerator] standard prompt {loop_index + 1}/{len(items)} {item.get('name')}")
-        return (len(items), item.get("positive") or "", negative)
+        print(f"[RaceGenerator] standard prompt {item.get('name')}")
+        return (names, item.get("positive") or "", negative)
 
 if PromptServer is not None:
     @PromptServer.instance.routes.get("/sprite_preset/standard_poses")

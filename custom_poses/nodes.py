@@ -65,8 +65,8 @@ class SpriteCustomPoses:
             "gen_width": ("INT", {"default": 2080, "min": 512, "max": 4096, "step": 16, "forceInput": True}),
             "gen_height": ("INT", {"default": 3120, "min": 512, "max": 4096, "step": 16, "forceInput": True}),
         }}
-    RETURN_TYPES = ("INT", "STRING", "STRING", "FLOAT", "IMAGE", "BOOLEAN")
-    RETURN_NAMES = ("count", "positive", "negative", "denoise", "reference", "use_reference")
+    RETURN_TYPES = ("STRING", "STRING", "STRING", "FLOAT", "IMAGE", "BOOLEAN")
+    RETURN_NAMES = ("pose_names", "positive", "negative", "denoise", "reference", "use_reference")
     FUNCTION = "run"
     CATEGORY = "sprite"
 
@@ -78,15 +78,16 @@ class SpriteCustomPoses:
                 item.update({"positive": positive, "negative": pose_negative, "width": width, "height": height, "denoise": denoise, "reference": reference_name})
         save_store(store)
         items = chosen(store, selected_pose)
+        names = "\n".join(item.get("name") or "" for item in poses)
         if not items:
-            return (1, "", "", denoise, torch.zeros((1, 64, 64, 3)), False)
+            return (names, "", "", denoise, torch.zeros((1, 64, 64, 3)), False)
         item = items[min(loop_index, len(items) - 1)]
         scale = gen_width / 2080
         pose_width = int(round((int(item.get("width") or gen_width) * scale) / 16) * 16)
         pose_height = int(round((int(item.get("height") or gen_height) * scale) / 16) * 16)
         image, used = load_reference(item.get("reference"), pose_width, pose_height)
-        print(f"[RaceGenerator] custom prompt {loop_index + 1}/{len(items)} {item.get('name')} reference={used}")
-        return (len(items), item.get("positive") or "", item.get("negative") or "", float(item.get("denoise") or denoise), image, used)
+        print(f"[RaceGenerator] custom prompt {item.get('name')} reference={used}")
+        return (names, item.get("positive") or "", item.get("negative") or "", float(item.get("denoise") or denoise), image, used)
 
 if PromptServer is not None:
     @PromptServer.instance.routes.get("/sprite_preset/custom_poses")
