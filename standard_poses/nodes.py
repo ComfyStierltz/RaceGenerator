@@ -1,10 +1,7 @@
 import json
 import os
 
-import torch
 from aiohttp import web
-from nodes import ConditioningConcat, common_ksampler
-import comfy.samplers
 
 try:
     from server import PromptServer
@@ -33,64 +30,25 @@ def pose_names():
     return names or ["01 front"]
 
 
-
-def as_image(image):
-    while image.ndim > 4 and image.shape[1] == 1:
-        image = image[:, 0]
-    if image.ndim == 5:
-        image = image[:, 0]
-    if image.ndim == 4 and image.shape[1] in (1, 3, 4) and image.shape[-1] not in (1, 3, 4):
-        image = image.permute(0, 2, 3, 1)
-    if image.ndim == 3:
-        image = image.unsqueeze(0)
-    if image.shape[-1] > 3:
-        image = image[:, :, :, :3]
-    return image.clamp(0, 1)
-
-
-def encode(clip, text):
-    return clip.encode_from_tokens_scheduled(clip.tokenize(text or ""))
-
-
 class SpriteStandardPoses:
     @classmethod
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "model": ("MODEL",),
-                "clip": ("CLIP",),
-                "vae": ("VAE",),
-                "latent": ("LATENT",),
-                "anatomy": ("STRING", {"forceInput": True}),
-                "clothes": ("STRING", {"forceInput": True}),
                 "selected_pose": ("STRING", {"forceInput": True}),
                 "editing_pose": (pose_names(), {"default": pose_names()[0]}),
                 "positive": ("STRING", {"multiline": True, "default": ""}),
                 "pose_negative": ("STRING", {"multiline": True, "default": ""}),
                 "shared_negative": ("STRING", {"multiline": True, "default": ""}),
-                "seed": ("INT", {"default": 0, "min": 0, "max": 0xFFFFFFFFFFFFFFFF}),
-                "steps": ("INT", {"default": 10, "min": 1, "max": 40}),
-                "cfg": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 20.0}),
-                "sampler_name": (comfy.samplers.KSampler.SAMPLERS, {"default": "euler_ancestral"}),
-                "scheduler": (comfy.samplers.KSampler.SCHEDULERS, {"default": "beta"}),
-                "denoise": ("FLOAT", {"default": 0.55, "min": 0.0, "max": 1.0}),
-            },
-            "optional": {
-                "gen_width": ("INT", {"default": 2080, "min": 512, "max": 4096, "step": 16, "forceInput": True}),
-                "gen_height": ("INT", {"default": 3120, "min": 512, "max": 4096, "step": 16, "forceInput": True}),
-            },
+            }
         }
 
-    RETURN_TYPES = ("IMAGE",)
-    RETURN_NAMES = ("images",)
+    RETURN_TYPES = ("STRING", "STRING")
+    RETURN_NAMES = ("positive", "negative")
     FUNCTION = "run"
     CATEGORY = "sprite"
-    OUTPUT_NODE = True
 
-    def run(self, model, clip, vae, latent, anatomy, clothes, selected_pose, editing_pose, positive, pose_negative, shared_negative, seed, steps, cfg, sampler_name, scheduler, denoise, gen_width=2080, gen_height=3120):
-        import folder_paths
-        from pathlib import Path
-        from PIL import Image
+    def run(self, selected_pose, editing_pose, positive, pose_negative, shared_negative):
         store = load_store()
         poses = store.get("poses") or []
         for item in poses:
@@ -99,46 +57,13 @@ class SpriteStandardPoses:
                 item["negative"] = pose_negative
         store["negative"] = shared_negative
         save_store(store)
-        if selected_pose == "all":
-            chosen = poses
-        else:
-            chosen = [item for item in poses if item.get("name") == selected_pose or item.get("name", "").startswith(selected_pose[:2])]
-            chosen = [item for item in chosen if not item.get("name", "").startswith("08") and not item.get("name", "").startswith("09")]
-        if not chosen:
-            print(f"[RaceGenerator] standard poses skipped for {selected_pose}")
-            return (torch.zeros((1, 64, 64, 3)),)
-        anatomy_cond = encode(clip, " ".join(part for part in (anatomy, clothes) if part and part.strip()))
-        frames = []
-        out = Path(folder_paths.get_output_directory()) / "sprites"
-        out.mkdir(parents=True, exist_ok=True)
-        for index, item in enumerate(chosen):
-            negative_text = ", ".join(part for part in (shared_negative, item.get("negative") or "") if part and part.strip())
-            positive_cond = ConditioningConcat().concat(anatomy_cond, encode(clip, item.get("positive") or positive))[0]
-            negative_cond = encode(clip, negative_text)
-            sampled = common_ksampler(model, seed + index, steps, cfg, sampler_name, scheduler, positive_cond, negative_cond, latent, denoise=denoise)[0]
-            image = as_image(vae.decode(sampled["samples"]))
-            frame = image[0]
-            frames.append(frame)
-            arr = (frame.clamp(0, 1).cpu().numpy() * 255).astype("uint8")
-            safe = f"{index + 1:02d}_{item.get('name', 'pose').replace(' ', '_')}.png"
-            Image.fromarray(arr).save(out / safe)
-            print(f"[RaceGenerator] saved {out / safe} {tuple(frame.shape)}")
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        small = []
-        for frame in frames:
-            scale = min(1040 / frame.shape[1], 1560 / frame.shape[0], 1)
-            preview = torch.nn.functional.interpolate(frame.permute(2, 0, 1).unsqueeze(0), scale_factor=scale, mode="area")
-            small.append(preview[0].permute(1, 2, 0).cpu())
-        print(f"[RaceGenerator] standard poses saved {len(small)} files to {out}")
-        height = max(frame.shape[0] for frame in small)
-        width = max(frame.shape[1] for frame in small)
-        batch = []
-        for frame in small:
-            canvas = torch.zeros((height, width, frame.shape[2]))
-            canvas[:frame.shape[0], :frame.shape[1]] = frame
-            batch.append(canvas)
-        return (torch.stack(batch, dim=0),)
+        chosen = next((item for item in poses if item.get("name") == selected_pose or selected_pose.startswith((item.get("name") or "")[:2])), None)
+        if selected_pose == "all" or chosen is None:
+            chosen = next((item for item in poses if item.get("name") == editing_pose), poses[0] if poses else {})
+        pose_positive = (chosen or {}).get("positive") or positive
+        pose_negative = ", ".join(part for part in (shared_negative, (chosen or {}).get("negative") or "") if part and part.strip())
+        print(f"[RaceGenerator] standard prompt {chosen.get('name') if chosen else editing_pose}")
+        return (pose_positive, pose_negative)
 
 
 if PromptServer is not None:
