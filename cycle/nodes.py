@@ -66,7 +66,7 @@ class SpritePoseStep:
                 lock = "same body proportions as the reference. " + lock
             positive = ", ".join(part for part in (lock, standard.get("shared_positive") or "", item.get("positive") or "") if part and part.strip())
             negative = ", ".join(part for part in ("cropped legs, missing feet, cut off thighs, half body", standard.get("negative") or "", item.get("negative") or "") if part and part.strip())
-            denoise = 0.4 if (loop_index == 0 or str(selected_pose).startswith("01")) else 0.5
+            denoise = 0.38 if (loop_index == 0 or str(selected_pose).startswith("01")) else 0.7
             print(f"[RaceGenerator] step {loop_index} standard {item.get('name')} denoise={denoise}")
             return (positive, negative, denoise, torch.zeros((1, 64, 64, 3)), False, gen_width, gen_height)
         scale = gen_width / 2080
