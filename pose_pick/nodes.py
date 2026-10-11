@@ -16,6 +16,7 @@ class SpritePosePick:
     @classmethod
     def INPUT_TYPES(cls):
         return {"required": {
+            "all_poses": ("BOOLEAN", {"default": True}),
             "pose": (pose_choices(), {"default": "all"}),
             "standard_poses": ("STRING", {"forceInput": True}),
             "custom_poses": ("STRING", {"forceInput": True}),
@@ -26,12 +27,14 @@ class SpritePosePick:
     CATEGORY = "sprite"
     def check_lazy_status(self, **kwargs):
         return []
-    def run(self, pose, standard_poses, custom_poses):
+    def run(self, all_poses, pose, standard_poses, custom_poses):
         standard = [name for name in standard_poses.splitlines() if name.strip()]
         custom = [name for name in custom_poses.splitlines() if name.strip()]
-        count = max(len(standard) + len(custom), 1) if pose == "all" else 1
-        print(f"[RaceGenerator] pick {pose} count={count} custom={custom}")
-        return (pose, count)
+        use_all = bool(all_poses) or pose == "all"
+        count = max(len(standard) + len(custom), 1) if use_all else 1
+        selected = "all" if use_all else pose
+        print(f"[RaceGenerator] pick all={use_all} pose={selected} count={count}")
+        return (selected, count)
 
 NODE_CLASS_MAPPINGS = {"SpritePosePick": SpritePosePick}
 NODE_DISPLAY_NAME_MAPPINGS = {"SpritePosePick": "Pose pick"}
