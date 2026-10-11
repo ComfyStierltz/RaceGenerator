@@ -144,7 +144,11 @@ class SpritePromptPreset:
                 path = os.path.join(folder_paths.get_input_directory(), os.path.basename(shown))
             if os.path.isfile(path):
                 image = Image.open(path).convert("RGB")
-                arr = torch.from_numpy(np.array(image).astype("float32") / 255.0).unsqueeze(0)
+                w, h = image.size
+                canvas = Image.new("RGB", (w, h), (0, 0, 0))
+                inner = image.resize((int(w * 0.82), int(h * 0.82)), Image.Resampling.LANCZOS)
+                canvas.paste(inner, ((w - inner.width) // 2, int(h * 0.10)))
+                arr = torch.from_numpy(np.array(canvas).astype("float32") / 255.0).unsqueeze(0)
                 images = [{"filename": os.path.basename(path), "subfolder": os.path.relpath(os.path.dirname(path), folder_paths.get_input_directory()), "type": "input"}]
                 return {"ui": {"images": images}, "result": (anatomy, negative, clothes, arr)}
         blank = torch.zeros((1, 64, 64, 3))
