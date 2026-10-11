@@ -9,32 +9,32 @@
     },
     {
       "name": "02 three-quarter left",
-      "positive": "three-quarter view, body turned 45 degrees to her left, face still visible",
+      "positive": "three-quarter view, body turned 45 degrees, one shoulder forward, face still visible, not front view",
       "negative": "straight front view"
     },
     {
       "name": "03 profile left",
-      "positive": "strict left profile, nose pointing left, one eye visible",
+      "positive": "strict side profile, nose pointing to the side, only one eye visible, body in profile, not front view",
       "negative": "front view, both eyes visible"
     },
     {
       "name": "04 three-quarter back left",
-      "positive": "three-quarter back view from the left, mostly the back, one cheek visible, no belly",
+      "positive": "three-quarter back view, mostly the back, one cheek visible, no belly, not front view",
       "negative": "front view, belly, navel"
     },
     {
       "name": "05 back",
-      "positive": "straight back view, back of the head, spine visible, no belly, not looking over the shoulder",
+      "positive": "straight back view, back of the head, spine, both shoulders, no face, no belly, not looking over the shoulder",
       "negative": "front view, belly, navel, breasts facing camera"
     },
     {
       "name": "06 profile right",
-      "positive": "strict right profile, nose pointing right, one eye visible",
+      "positive": "strict right profile, nose pointing right, only one eye visible, not front view",
       "negative": "front view, both eyes visible"
     },
     {
       "name": "07 three-quarter right",
-      "positive": "three-quarter view, body turned 45 degrees to her right, face still visible",
+      "positive": "three-quarter view from the right, body turned, face still visible, not front view",
       "negative": "straight front view"
     }
   ]

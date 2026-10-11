@@ -53,7 +53,7 @@ class SpritePoseStep:
         if not is_custom:
             positive = ", ".join(part for part in (standard.get("shared_positive") or "", item.get("positive") or "") if part and part.strip())
             negative = ", ".join(part for part in (standard.get("negative") or "", item.get("negative") or "") if part and part.strip())
-            denoise = 0.28 if (loop_index == 0 or str(selected_pose).startswith("01")) else 0.38
+            denoise = 0.32 if (loop_index == 0 or str(selected_pose).startswith("01")) else 0.68
             print(f"[RaceGenerator] step {loop_index} standard {item.get('name')} denoise={denoise}")
             return (positive, negative, denoise, torch.zeros((1, 64, 64, 3)), False, gen_width, gen_height)
         scale = gen_width / 2080
