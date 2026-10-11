@@ -1,6 +1,6 @@
 {
-  "shared_positive": "Wide full-body studio shot, camera locked. Character small and centered, about 60 percent of the frame height. Large empty black margin above the hair, at least 18 percent of the frame. Top of the head well below the top edge, both feet fully visible with margin above the bottom edge. Not cropped, not a close-up.",
-  "negative": "cropped, cut off head, cut off hair, hair touching the top edge, head touching the top edge, cut off feet, feet touching the bottom edge, close-up, tight framing, zoomed in, portrait crop, bust shot",
+  "shared_positive": "adult woman, female, same person as the reference. Wide full-body shot, character small, about 55 percent of frame height. Large empty black margin above the hair. Head on the neck, one head only. Top of the head well below the top edge, both feet above the bottom edge. Not cropped.",
+  "negative": "male, man, penis, testicles, balls, scrotum, hermaphrodite, extra head, head on crotch, head attached to groin, two heads, cropped, cut off head, cut off hair, head touching the top edge, cut off feet, close-up, zoomed in",
   "poses": [
     {
       "name": "01 front",
