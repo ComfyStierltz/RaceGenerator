@@ -3,7 +3,7 @@
     {
       "name": "08 squat",
       "positive": "one single adult elf woman, not a row, not twins, not a turnaround sheet. Deep squat, knees spread wide, feet flat, hands on the knees, crotch visible. Wide full-body shot, character small in the frame, head below the top edge, both feet above the bottom edge, empty black margin.",
-      "negative": "male, penis, testicles, balls, extra head, head on crotch, cropped head, hand covering crotch, standing, cropped, three people, twins, turnaround sheet, row of characters",
+      "negative": "hand covering crotch, standing, cropped, three people, twins, turnaround sheet, row of characters",
       "width": 2496,
       "height": 2080,
       "denoise": 0.9,
@@ -13,7 +13,7 @@
     {
       "name": "09 rear",
       "positive": "one single adult elf woman, not a row, not twins. Bent forward at the waist, true rear view, back to the camera, knees slightly bent, not kneeling upright. Full body inside the frame, both feet visible, empty black margin.",
-      "negative": "male, penis, testicles, balls, extra head, head on crotch, cropped head, looking over shoulder, front view, belly, kneeling upright, three people, twins, cropped feet",
+      "negative": "looking over shoulder, front view, belly, kneeling upright, three people, twins, cropped feet",
       "width": 2080,
       "height": 2080,
       "denoise": 0.9,

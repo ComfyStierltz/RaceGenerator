@@ -1,41 +1,46 @@
 {
-  "shared_positive": "adult woman, female, same person as the reference. Wide full-body shot, character small, about 55 percent of frame height. Large empty black margin above the hair. Head on the neck, one head only. Top of the head well below the top edge, both feet above the bottom edge. Not cropped.",
-  "negative": "male, man, penis, testicles, balls, scrotum, hermaphrodite, extra head, head on crotch, head attached to groin, two heads, cropped, cut off head, cut off hair, head touching the top edge, cut off feet, close-up, zoomed in",
+  "shared_positive": "Wide full-body shot, camera locked. Character small and centered, about 50 percent of frame height. Large empty black margin above the head, at least 20 percent of the frame. Top of the head well below the top edge, both feet fully visible above the bottom edge. Not cropped, not a close-up.",
+  "negative": "cropped, cut off head, cut off hair, head touching the top edge, cut off feet, feet touching the bottom edge, close-up, tight framing, zoomed in, portrait crop",
   "poses": [
     {
       "name": "01 front",
-      "positive": "front view, facing the camera, arms relaxed at the sides",
+      "positive": "pose: strict front view, facing the camera, both shoulders equal, arms relaxed at the sides",
       "negative": ""
     },
     {
       "name": "02 three-quarter left",
-      "positive": "three-quarter view, body turned 45 degrees, one shoulder forward, face still visible, not front view",
+      "positive": "pose: three-quarter view from the left, body turned 45 degrees, left shoulder forward, face still visible, not front view",
       "negative": "straight front view"
     },
     {
       "name": "03 profile left",
-      "positive": "strict side profile, nose pointing to the side, only one eye visible, body in profile, not front view",
+      "positive": "pose: strict left profile, nose pointing left, only one eye visible, body in profile, not front view",
       "negative": "front view, both eyes visible"
     },
     {
       "name": "04 three-quarter back left",
-      "positive": "three-quarter back view, mostly the back, one cheek visible, no belly, not front view",
+      "positive": "pose: three-quarter back view from the left, mostly the back, one cheek visible, no belly, not front view",
       "negative": "front view, belly, navel"
     },
     {
       "name": "05 back",
-      "positive": "straight back view, back of the head, spine, both shoulders, no face, no belly, not looking over the shoulder",
+      "positive": "pose: straight back view, back of the head, spine, both shoulders, no face, no belly",
       "negative": "front view, belly, navel, breasts facing camera"
     },
     {
       "name": "06 profile right",
-      "positive": "strict right profile, nose pointing right, only one eye visible, not front view",
+      "positive": "pose: strict right profile, nose pointing right, only one eye visible, not front view",
       "negative": "front view, both eyes visible"
     },
     {
       "name": "07 three-quarter right",
-      "positive": "three-quarter view from the right, body turned, face still visible, not front view",
+      "positive": "pose: three-quarter view from the right, body turned 45 degrees, right shoulder forward, face still visible, not front view",
       "negative": "straight front view"
+    },
+    {
+      "name": "08 three-quarter back right",
+      "positive": "pose: three-quarter back view from the right, mostly the back, one cheek visible, no belly, not front view",
+      "negative": "front view, belly, navel"
     }
   ]
 }
