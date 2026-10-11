@@ -1,6 +1,6 @@
 {
-  "shared_positive": "Wide full-body studio shot, camera locked. The character is small and centered, about 70 percent of the frame height. Large empty black margin above the hair, at least 12 percent of the frame. Top of the head well below the top edge, both feet fully visible above the bottom edge. Not cropped, not a close-up, not zoomed in.",
-  "negative": "cropped, cut off head, cut off hair, hair touching the top edge, head touching the top edge, cut off feet, feet touching the bottom edge, close-up, tight framing, zoomed in, portrait crop, bust shot, back view showing belly, breasts visible from behind, navel visible from behind, different face, different eyes, different nose",
+  "shared_positive": "Wide full-body studio shot, camera locked. Character small and centered, about 60 percent of the frame height. Large empty black margin above the hair, at least 18 percent of the frame. Top of the head well below the top edge, both feet fully visible with margin above the bottom edge. Not cropped, not a close-up.",
+  "negative": "cropped, cut off head, cut off hair, hair touching the top edge, head touching the top edge, cut off feet, feet touching the bottom edge, close-up, tight framing, zoomed in, portrait crop, bust shot",
   "poses": [
     {
       "name": "01 front",

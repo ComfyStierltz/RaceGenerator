@@ -38,7 +38,7 @@ class SpritePoseStep:
     RETURN_NAMES = ("positive", "negative", "denoise", "reference", "use_reference", "save_width", "save_height")
     FUNCTION = "run"
     CATEGORY = "sprite"
-    def run(self, selected_pose, loop_index, gen_width, gen_height):
+    def run(self, selected_pose, loop_index, gen_width, gen_height, front_denoise=0.32, turn_denoise=0.72, custom_denoise=0.9):
         standard = load("standard_poses")
         custom = load("custom_poses")
         standard_items = standard.get("poses") or []
@@ -53,7 +53,7 @@ class SpritePoseStep:
         if not is_custom:
             positive = ", ".join(part for part in (standard.get("shared_positive") or "", item.get("positive") or "") if part and part.strip())
             negative = ", ".join(part for part in (standard.get("negative") or "", item.get("negative") or "") if part and part.strip())
-            denoise = float(item.get("denoise") or standard.get("denoise") or 0.55)
+            denoise = float(front_denoise) if loop_index == 0 else float(turn_denoise)
             print(f"[RaceGenerator] step {loop_index} standard {item.get('name')} denoise={denoise}")
             return (positive, negative, denoise, torch.zeros((1, 64, 64, 3)), False, gen_width, gen_height)
         scale = gen_width / 2080
@@ -62,7 +62,7 @@ class SpritePoseStep:
         use = bool(item.get("use_reference")) and item.get("reference") not in (None, "", "none")
         image, used = plate(item.get("reference"), width, height) if use else (torch.zeros((1, height, width, 3)), False)
         print(f"[RaceGenerator] step {loop_index} custom {item.get('name')} {width}x{height} reference={use}")
-        return (item.get("positive") or "", item.get("negative") or "", 0.85 if use else 1.0, image, True, width, height)
+        return (item.get("positive") or "", item.get("negative") or "", float(custom_denoise), image, True, width, height)
 
 NODE_CLASS_MAPPINGS = {"SpritePoseStep": SpritePoseStep}
 NODE_DISPLAY_NAME_MAPPINGS = {"SpritePoseStep": "Pose step"}
