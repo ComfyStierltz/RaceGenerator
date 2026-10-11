@@ -52,12 +52,15 @@ def clothes_names():
 
 
 
-def race_images():
+def race_folder():
     import folder_paths
     folder = os.path.join(folder_paths.get_input_directory(), "RaceGenerator", "races")
     os.makedirs(folder, exist_ok=True)
+    return folder
+
+def race_images():
     names = ["none"]
-    for name in sorted(os.listdir(folder)):
+    for name in sorted(os.listdir(race_folder())):
         if name.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".bmp")):
             names.append(f"RaceGenerator/races/{name}")
     return names
@@ -140,8 +143,6 @@ class SpritePromptPreset:
         images = []
         if shown not in ("none", ""):
             path = shown if os.path.isabs(shown) else os.path.join(folder_paths.get_input_directory(), shown)
-            if not os.path.isfile(path):
-                path = os.path.join(folder_paths.get_input_directory(), os.path.basename(shown))
             if os.path.isfile(path):
                 image = Image.open(path).convert("RGB")
                 w, h = image.size
@@ -188,7 +189,27 @@ class SpritePresetSelect:
 if PromptServer is not None:
     @PromptServer.instance.routes.get("/sprite_preset/list")
     async def sprite_preset_list(request):
-        return web.json_response({"races": race_names(), "clothes": clothes_names()})
+        return web.json_response({"races": race_names(), "clothes": clothes_names(), "references": race_images()})
+
+    @PromptServer.instance.routes.post("/sprite_preset/upload_race")
+    async def sprite_preset_upload_race(request):
+        reader = await request.multipart()
+        field = await reader.next()
+        if field is None:
+            return web.json_response({"error": "no file"}, status=400)
+        name = os.path.basename(field.filename or "race.png")
+        folder = race_folder()
+        path = os.path.join(folder, name)
+        size = 0
+        with open(path, "wb") as handle:
+            while True:
+                chunk = await field.read_chunk()
+                if not chunk:
+                    break
+                size += len(chunk)
+                handle.write(chunk)
+        rel = f"RaceGenerator/races/{name}"
+        return web.json_response({"ok": True, "name": rel, "references": race_images()})
 
     @PromptServer.instance.routes.post("/sprite_preset/save_body")
     async def sprite_preset_save_body(request):

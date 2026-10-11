@@ -42,6 +42,25 @@ app.registerExtension({
                 if (previous) return previous.apply(this, arguments);
             };
         }
+        node.addWidget("button", "Загрузить референс", null, () => {
+            const input = document.createElement("input");
+            input.type = "file";
+            input.accept = "image/*";
+            input.onchange = async () => {
+                const file = input.files && input.files[0];
+                if (!file) return;
+                const body = new FormData();
+                body.append("image", file, file.name);
+                const response = await fetch("/sprite_preset/upload_race", {method: "POST", body});
+                const data = await response.json();
+                if (!response.ok || !data.name) {
+                    alert(data.error || "upload failed");
+                    return;
+                }
+                setCombo(node, "race_reference", data.references || [data.name], data.name);
+            };
+            input.click();
+        });
         node.addWidget("button", "Создать расу", null, async () => {
             const name = prompt("Имя новой расы");
             if (!name) return;
@@ -69,6 +88,6 @@ app.registerExtension({
             const data = await response.json();
             setCombo(node, "clothes_preset", data.names || [], name);
         });
-        node.setSize([Math.max(node.size[0], 620), node.size[1] + 70]);
+        node.setSize([Math.max(node.size[0], 620), node.size[1] + 100]);
     },
 });
