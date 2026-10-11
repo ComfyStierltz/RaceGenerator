@@ -124,8 +124,8 @@ class SpritePromptPreset:
             }
         }
 
-    RETURN_TYPES = ("STRING", "STRING", "STRING", "IMAGE")
-    RETURN_NAMES = ("anatomy", "negative", "clothes", "reference")
+    RETURN_TYPES = ("STRING", "STRING", "STRING", "IMAGE", "FLOAT")
+    RETURN_NAMES = ("anatomy", "negative", "clothes", "reference", "denoise")
     FUNCTION = "run"
     OUTPUT_NODE = True
     CATEGORY = "sprite"
@@ -145,12 +145,20 @@ class SpritePromptPreset:
         os.makedirs(os.path.dirname(mode_path), exist_ok=True)
         with open(mode_path, "w", encoding="utf-8") as handle:
             json.dump({"copy_face": bool(copy_face), "copy_body": bool(copy_body)}, handle)
+        naked = clothes_preset == NAKED
+        denoise = 0.34 if copy_face else 0.48
         if copy_face:
-            anatomy = "exact same face as the reference, same eyes, same nose, same mouth, same jaw, same hair, same age. " + (anatomy or "")
+            anatomy = "exact same face as the reference photograph, same eyes, same nose, same mouth, same jaw, same hair color and length, same age, do not invent another face. " + (anatomy or "")
         if copy_body:
-            anatomy = "same body as the reference, same bust, same waist, same hips, same proportions. " + (anatomy or "")
-        anatomy = (anatomy or "") + " Full body from head to feet. If the reference is cropped, complete the missing legs and feet. Both feet visible, not cut off."
-        negative = "cropped legs, missing legs, cut off thighs, cut off feet, half body, bust shot, " + (negative or "")
+            anatomy = "same body as the reference, same bust size, same waist, same hips, same arm pose, same proportions. " + (anatomy or "")
+            denoise = min(denoise, 0.36 if copy_face else 0.5)
+        if naked:
+            clothes = ""
+            anatomy = "completely nude, no clothes, no shorts, no skirt, bare chest, bare hips, bare legs. " + (anatomy or "")
+            negative = "clothes, clothing, shorts, skirt, plaid, underwear, panties, dressed, outfit, " + (negative or "")
+            denoise = max(denoise, 0.42)
+        anatomy = (anatomy or "") + " Full body from head to feet. Legs continue directly from the hips, thighs connected to the body, no gap, no floating feet. Both feet visible."
+        negative = "floating feet, disconnected legs, gap between body and feet, cropped legs, missing legs, cut off thighs, " + (negative or "")
         shown = race_reference or "none"
         images = []
         if shown not in ("none", ""):
@@ -160,9 +168,9 @@ class SpritePromptPreset:
                 image = full_body_canvas(image)
                 arr = torch.from_numpy(__import__("numpy").array(image).astype("float32") / 255.0).unsqueeze(0)
                 images = [{"filename": os.path.basename(path), "subfolder": os.path.relpath(os.path.dirname(path), folder_paths.get_input_directory()), "type": "input"}]
-                return {"ui": {"images": images}, "result": (anatomy, negative, clothes, arr)}
+                return {"ui": {"images": images}, "result": (anatomy, negative, clothes, arr, denoise)}
         blank = torch.zeros((1, 64, 64, 3))
-        return {"ui": {"images": []}, "result": (anatomy, negative, clothes, blank)}
+        return {"ui": {"images": []}, "result": (anatomy, negative, clothes, blank, denoise)}
 
 
 def full_body_canvas(image):
@@ -170,14 +178,15 @@ def full_body_canvas(image):
     width, height = image.size
     if height / max(width, 1) >= 1.35:
         return image
+    # Small extension zone directly under the crop, not a huge empty gap.
     canvas_w = width
-    canvas_h = int(width * 1.5)
+    canvas_h = int(width * 1.45)
     canvas = Image.new("RGB", (canvas_w, canvas_h), (0, 0, 0))
-    max_h = int(canvas_h * 0.68)
+    max_h = int(canvas_h * 0.84)
     scale = min(canvas_w / width, max_h / height)
     fitted = image.resize((max(1, int(width * scale)), max(1, int(height * scale))), Image.Resampling.LANCZOS)
     left = (canvas_w - fitted.width) // 2
-    canvas.paste(fitted, (left, int(canvas_h * 0.03)))
+    canvas.paste(fitted, (left, int(canvas_h * 0.02)))
     return canvas
 
 
