@@ -66,8 +66,8 @@ def load_race(name):
     for file_name in race_files():
         data = read_json(os.path.join(RACE_DIR, file_name))
         if data.get("name") == name or file_name[:-5] == name:
-            return data.get("anatomy") or "", data.get("negative") or ""
-    return "", ""
+            return data
+    return {}
 
 
 def load_clothes(name):
@@ -80,11 +80,20 @@ def load_clothes(name):
     return ""
 
 
-def save_race(name, anatomy, negative):
+def save_race(name, anatomy, negative, reference="none"):
     os.makedirs(RACE_DIR, exist_ok=True)
     path = os.path.join(RACE_DIR, slug(name) + ".json")
+    current = {}
+    if os.path.isfile(path):
+        current = read_json(path)
+    data = {
+        "name": name,
+        "anatomy": anatomy if anatomy else current.get("anatomy") or "",
+        "negative": negative if negative else current.get("negative") or "",
+        "reference": reference or current.get("reference") or "none",
+    }
     with open(path, "w", encoding="utf-8") as f:
-        json.dump({"name": name, "anatomy": anatomy, "negative": negative}, f, ensure_ascii=False, indent=2)
+        json.dump(data, f, ensure_ascii=False, indent=2)
 
 
 def save_clothes(name, text):
@@ -123,6 +132,10 @@ class SpritePromptPreset:
         import torch
         folder = os.path.join(folder_paths.get_input_directory(), "RaceGenerator", "races")
         os.makedirs(folder, exist_ok=True)
+        if race_preset and race_preset != "(пусто)":
+            save_race(race_preset, anatomy, negative, race_reference or "none")
+        if clothes_preset and clothes_preset != NAKED and clothes.strip():
+            save_clothes(clothes_preset, clothes)
         shown = race_reference or "none"
         images = []
         if shown not in ("none", ""):
@@ -163,9 +176,9 @@ class SpritePresetSelect:
         if not apply:
             text = clothes_in or ""
             return (anatomy_in or "", negative_in or "", text, bool(text.strip()))
-        anatomy, negative = load_race(race_preset)
+        data = load_race(race_preset)
         clothes = load_clothes(clothes_preset)
-        return (anatomy, negative, clothes, clothes_preset != NAKED and bool(clothes.strip()))
+        return (data.get("anatomy") or "", data.get("negative") or "", clothes, clothes_preset != NAKED and bool(clothes.strip()))
 
 
 if PromptServer is not None:
@@ -179,8 +192,17 @@ if PromptServer is not None:
         name = (data.get("name") or "").strip()
         if not name:
             return web.json_response({"error": "empty name"}, status=400)
-        save_race(name, data.get("anatomy") or "", data.get("negative") or "")
+        save_race(name, data.get("anatomy") or "", data.get("negative") or "", data.get("reference") or "none")
         return web.json_response({"ok": True, "names": race_names()})
+
+    @PromptServer.instance.routes.get("/sprite_preset/race")
+    async def sprite_preset_race(request):
+        return web.json_response(load_race(request.query.get("name", "")))
+
+    @PromptServer.instance.routes.get("/sprite_preset/clothes")
+    async def sprite_preset_clothes(request):
+        name = request.query.get("name", "")
+        return web.json_response({"name": name, "clothes": load_clothes(name)})
 
     @PromptServer.instance.routes.post("/sprite_preset/save_clothes")
     async def sprite_preset_save_clothes(request):
