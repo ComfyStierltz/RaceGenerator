@@ -31,7 +31,8 @@ class SpritePosePick:
         standard = [name for name in standard_poses.splitlines() if name.strip()]
         custom = [name for name in custom_poses.splitlines() if name.strip()]
         use_all = bool(all_poses) or pose == "all"
-        count = max(len(standard) + len(custom), 1) if use_all else 1
+        file_count = len(file_names("standard_poses")) + len(file_names("custom_poses"))
+        count = max(file_count, len(standard) + len(custom), 1) if use_all else 1
         selected = "all" if use_all else pose
         print(f"[RaceGenerator] pick all={use_all} pose={selected} count={count}")
         return (selected, count)
