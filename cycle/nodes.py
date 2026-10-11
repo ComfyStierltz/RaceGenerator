@@ -51,9 +51,10 @@ class SpritePoseStep:
             item = next((row for row in standard_items + custom_items if row.get("name") == selected_pose or selected_pose.startswith((row.get("name") or "")[:2])), {})
             is_custom = item in custom_items
         if not is_custom:
-            positive = ", ".join(part for part in (standard.get("shared_positive") or "", item.get("positive") or "") if part and part.strip())
+            lock = "the exact same woman as the reference photograph, same face, same eyes, same nose, same mouth, same hair, same age, do not invent another person"
+            positive = ", ".join(part for part in (lock, standard.get("shared_positive") or "", item.get("positive") or "") if part and part.strip())
             negative = ", ".join(part for part in (standard.get("negative") or "", item.get("negative") or "") if part and part.strip())
-            denoise = 0.32 if (loop_index == 0 or str(selected_pose).startswith("01")) else 0.68
+            denoise = 0.22 if (loop_index == 0 or str(selected_pose).startswith("01")) else 0.34
             print(f"[RaceGenerator] step {loop_index} standard {item.get('name')} denoise={denoise}")
             return (positive, negative, denoise, torch.zeros((1, 64, 64, 3)), False, gen_width, gen_height)
         scale = gen_width / 2080
