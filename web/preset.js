@@ -61,6 +61,14 @@ app.registerExtension({
             };
             input.click();
         });
+        node.addWidget("button", "Копировать лицо", null, () => {
+            const item = widget(node, "copy_face");
+            if (item) item.value = !item.value;
+        });
+        node.addWidget("button", "Копировать фигуру", null, () => {
+            const item = widget(node, "copy_body");
+            if (item) item.value = !item.value;
+        });
         node.addWidget("button", "Создать расу", null, async () => {
             const name = prompt("Имя новой расы");
             if (!name) return;
@@ -88,6 +96,6 @@ app.registerExtension({
             const data = await response.json();
             setCombo(node, "clothes_preset", data.names || [], name);
         });
-        node.setSize([Math.max(node.size[0], 620), node.size[1] + 100]);
+        node.setSize([Math.max(node.size[0], 620), node.size[1] + 150]);
     },
 });

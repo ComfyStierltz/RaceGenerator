@@ -119,6 +119,8 @@ class SpritePromptPreset:
                 "clothes_preset": (clothes_names(), {"default": clothes_names()[0]}),
                 "clothes": ("STRING", {"multiline": True, "default": ""}),
                 "race_reference": (race_images(), {"default": "none", "image_upload": True}),
+                "copy_face": ("BOOLEAN", {"default": True}),
+                "copy_body": ("BOOLEAN", {"default": True}),
             }
         }
 
@@ -128,7 +130,7 @@ class SpritePromptPreset:
     OUTPUT_NODE = True
     CATEGORY = "sprite"
 
-    def run(self, race_preset, anatomy, negative, clothes_preset, clothes, race_reference="none"):
+    def run(self, race_preset, anatomy, negative, clothes_preset, clothes, race_reference="none", copy_face=True, copy_body=True):
         import folder_paths
         from PIL import Image
         import numpy as np
@@ -139,17 +141,44 @@ class SpritePromptPreset:
             save_race(race_preset, anatomy, negative, race_reference or "none")
         if clothes_preset and clothes_preset != NAKED and clothes.strip():
             save_clothes(clothes_preset, clothes)
+        mode_path = os.path.join(folder_paths.get_input_directory(), "RaceGenerator", "mode.json")
+        os.makedirs(os.path.dirname(mode_path), exist_ok=True)
+        with open(mode_path, "w", encoding="utf-8") as handle:
+            json.dump({"copy_face": bool(copy_face), "copy_body": bool(copy_body)}, handle)
+        if copy_face:
+            anatomy = "exact same face as the reference, same eyes, same nose, same mouth, same jaw, same hair, same age. " + (anatomy or "")
+        if copy_body:
+            anatomy = "same body as the reference, same bust, same waist, same hips, same proportions. " + (anatomy or "")
+        anatomy = (anatomy or "") + " Full body from head to feet. If the reference is cropped, complete the missing legs and feet. Both feet visible, not cut off."
+        negative = "cropped legs, missing legs, cut off thighs, cut off feet, half body, bust shot, " + (negative or "")
         shown = race_reference or "none"
         images = []
         if shown not in ("none", ""):
             path = shown if os.path.isabs(shown) else os.path.join(folder_paths.get_input_directory(), shown)
             if os.path.isfile(path):
                 image = Image.open(path).convert("RGB")
-                arr = torch.from_numpy(np.array(image).astype("float32") / 255.0).unsqueeze(0)
+                image = full_body_canvas(image)
+                arr = torch.from_numpy(__import__("numpy").array(image).astype("float32") / 255.0).unsqueeze(0)
                 images = [{"filename": os.path.basename(path), "subfolder": os.path.relpath(os.path.dirname(path), folder_paths.get_input_directory()), "type": "input"}]
                 return {"ui": {"images": images}, "result": (anatomy, negative, clothes, arr)}
         blank = torch.zeros((1, 64, 64, 3))
         return {"ui": {"images": []}, "result": (anatomy, negative, clothes, blank)}
+
+
+def full_body_canvas(image):
+    from PIL import Image
+    width, height = image.size
+    if height / max(width, 1) >= 1.35:
+        return image
+    canvas_w = width
+    canvas_h = int(width * 1.5)
+    canvas = Image.new("RGB", (canvas_w, canvas_h), (0, 0, 0))
+    max_h = int(canvas_h * 0.68)
+    scale = min(canvas_w / width, max_h / height)
+    fitted = image.resize((max(1, int(width * scale)), max(1, int(height * scale))), Image.Resampling.LANCZOS)
+    left = (canvas_w - fitted.width) // 2
+    canvas.paste(fitted, (left, int(canvas_h * 0.03)))
+    return canvas
 
 
 class SpritePresetSelect:

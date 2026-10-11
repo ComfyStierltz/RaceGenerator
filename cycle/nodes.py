@@ -51,10 +51,22 @@ class SpritePoseStep:
             item = next((row for row in standard_items + custom_items if row.get("name") == selected_pose or selected_pose.startswith((row.get("name") or "")[:2])), {})
             is_custom = item in custom_items
         if not is_custom:
-            lock = "the exact same woman as the reference photograph, same face, same eyes, same nose, same mouth, same hair, same age, do not invent another person"
+            mode = {}
+            mode_path = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "..")
+            try:
+                import folder_paths
+                with open(os.path.join(folder_paths.get_input_directory(), "RaceGenerator", "mode.json"), "r", encoding="utf-8") as handle:
+                    mode = json.load(handle)
+            except Exception:
+                mode = {}
+            lock = "full body, head to feet, both feet visible, complete any cropped legs"
+            if mode.get("copy_face", True):
+                lock = "exact same face as the reference, same eyes, same nose, same mouth, same hair, same age. " + lock
+            if mode.get("copy_body", True):
+                lock = "same body proportions as the reference. " + lock
             positive = ", ".join(part for part in (lock, standard.get("shared_positive") or "", item.get("positive") or "") if part and part.strip())
-            negative = ", ".join(part for part in (standard.get("negative") or "", item.get("negative") or "") if part and part.strip())
-            denoise = 0.22 if (loop_index == 0 or str(selected_pose).startswith("01")) else 0.34
+            negative = ", ".join(part for part in ("cropped legs, missing feet, cut off thighs, half body", standard.get("negative") or "", item.get("negative") or "") if part and part.strip())
+            denoise = 0.4 if (loop_index == 0 or str(selected_pose).startswith("01")) else 0.5
             print(f"[RaceGenerator] step {loop_index} standard {item.get('name')} denoise={denoise}")
             return (positive, negative, denoise, torch.zeros((1, 64, 64, 3)), False, gen_width, gen_height)
         scale = gen_width / 2080
