@@ -8,19 +8,19 @@ app.registerExtension({
 
         const container = document.createElement("div");
         container.style.cssText = `
-            position: absolute; background: #1e1e1e; border: 1px solid #555;
-            border-radius: 6px; padding: 6px; z-index: 20;
+            position: absolute; background: #1a1a1a; border: 1px solid #444;
+            border-radius: 4px; padding: 6px; z-index: 5;
             font-family: sans-serif; font-size: 12px; color: #ddd;
-            pointer-events: auto; box-sizing: border-box;
+            pointer-events: auto; box-sizing: border-box; overflow: hidden;
         `;
 
         const tabBar = document.createElement("div");
-        tabBar.style.cssText = "display:flex; gap:4px; margin-bottom:8px;";
+        tabBar.style.cssText = "display:flex; gap:4px; margin-bottom:6px;";
         const raceBtn = document.createElement("button");
         const clothesBtn = document.createElement("button");
         const styleBtn = (b, active) => {
-            b.style.cssText = `flex:1; padding:6px; border:none; border-radius:4px; cursor:pointer;
-                background:${active ? "#5a3d8a" : "#3a3a3a"}; color:${active ? "#fff" : "#aaa"}; font-weight:bold;`;
+            b.style.cssText = `flex:1; padding:5px; border:none; border-radius:3px; cursor:pointer;
+                background:${active ? "#5a3d8a" : "#333"}; color:${active ? "#fff" : "#aaa"}; font-weight:bold; font-size:12px;`;
         };
         raceBtn.textContent = "Race";
         clothesBtn.textContent = "Clothes";
@@ -32,7 +32,6 @@ app.registerExtension({
         document.body.appendChild(container);
 
         node._tab = "race";
-        node._container = container;
 
         const getW = (name) => node.widgets?.find(w => w.name === name);
 
@@ -47,25 +46,15 @@ app.registerExtension({
                 const genderW = getW("gender_male");
                 const posW = getW("race_positive");
                 const negW = getW("race_negative");
-
                 content.innerHTML = `
-                    <div style="margin-bottom:6px;">
-                        <label style="display:block; margin-bottom:2px;">Race</label>
-                        <select id="st_race" style="width:100%; background:#333; color:#fff; border:1px solid #555; padding:4px; border-radius:3px;"></select>
-                    </div>
-                    <div style="margin-bottom:6px;">
-                        <label><input type="checkbox" id="st_gender"> Male</label>
-                    </div>
-                    <div style="margin-bottom:6px;">
-                        <label style="display:block; margin-bottom:2px;">Positive</label>
-                        <textarea id="st_rpos" rows="3" style="width:100%; background:#333; color:#fff; border:1px solid #555; border-radius:3px; resize:vertical;"></textarea>
-                    </div>
-                    <div>
-                        <label style="display:block; margin-bottom:2px;">Negative</label>
-                        <textarea id="st_rneg" rows="2" style="width:100%; background:#333; color:#fff; border:1px solid #555; border-radius:3px; resize:vertical;"></textarea>
-                    </div>
+                    <div style="margin-bottom:4px;"><label style="font-size:11px;">Race</label>
+                        <select id="st_race" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;padding:3px;border-radius:3px;"></select></div>
+                    <div style="margin-bottom:4px;"><label style="font-size:11px;"><input type="checkbox" id="st_gender"> Male</label></div>
+                    <div style="margin-bottom:4px;"><label style="font-size:11px;">Positive</label>
+                        <textarea id="st_rpos" rows="2" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;border-radius:3px;resize:vertical;font-size:11px;"></textarea></div>
+                    <div><label style="font-size:11px;">Negative</label>
+                        <textarea id="st_rneg" rows="2" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;border-radius:3px;resize:vertical;font-size:11px;"></textarea></div>
                 `;
-
                 const sel = content.querySelector("#st_race");
                 if (raceW && sel) {
                     (raceW.options?.values || ["none"]).forEach(v => {
@@ -77,10 +66,7 @@ app.registerExtension({
                     sel.onchange = () => { raceW.value = sel.value; };
                 }
                 const cb = content.querySelector("#st_gender");
-                if (genderW && cb) {
-                    cb.checked = !!genderW.value;
-                    cb.onchange = () => { genderW.value = cb.checked; };
-                }
+                if (genderW && cb) { cb.checked = !!genderW.value; cb.onchange = () => { genderW.value = cb.checked; }; }
                 const tp = content.querySelector("#st_rpos");
                 if (posW && tp) { tp.value = posW.value || ""; tp.oninput = () => { posW.value = tp.value; }; }
                 const tn = content.querySelector("#st_rneg");
@@ -89,14 +75,10 @@ app.registerExtension({
                 const clothesW = getW("clothes");
                 const cposW = getW("clothes_positive");
                 content.innerHTML = `
-                    <div style="margin-bottom:6px;">
-                        <label style="display:block; margin-bottom:2px;">Clothes</label>
-                        <select id="st_clothes" style="width:100%; background:#333; color:#fff; border:1px solid #555; padding:4px; border-radius:3px;"></select>
-                    </div>
-                    <div>
-                        <label style="display:block; margin-bottom:2px;">Clothes Positive</label>
-                        <textarea id="st_cpos" rows="3" style="width:100%; background:#333; color:#fff; border:1px solid #555; border-radius:3px; resize:vertical;"></textarea>
-                    </div>
+                    <div style="margin-bottom:4px;"><label style="font-size:11px;">Clothes</label>
+                        <select id="st_clothes" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;padding:3px;border-radius:3px;"></select></div>
+                    <div><label style="font-size:11px;">Clothes Positive</label>
+                        <textarea id="st_cpos" rows="2" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;border-radius:3px;resize:vertical;font-size:11px;"></textarea></div>
                 `;
                 const sel = content.querySelector("#st_clothes");
                 if (clothesW && sel) {
@@ -113,26 +95,31 @@ app.registerExtension({
             }
         };
 
-        raceBtn.onclick = () => { node._tab = "race"; render(); hideNative(); };
-        clothesBtn.onclick = () => { node._tab = "clothes"; render(); hideNative(); };
+        raceBtn.onclick = () => { node._tab = "race"; render(); };
+        clothesBtn.onclick = () => { node._tab = "clothes"; render(); };
 
+        // Hide native widgets so only the div shows
         const hideNative = () => {
-            const hide = ["race", "clothes", "gender_male", "race_positive", "race_negative", "clothes_positive"];
+            const hide = ["race", "clothes", "gender_male", "race_positive", "race_negative", "clothes_positive", "tab"];
             for (const w of node.widgets || []) {
                 if (hide.includes(w.name)) w.hidden = true;
             }
-            node.setSize(node.computeSize());
+            // Shrink node to just title + sockets + our overlay
+            node.setSize([node.size[0], 90]);
         };
 
         const updatePos = () => {
             if (!node.pos || !app.canvas) return;
             const scale = app.canvas.ds?.scale || 1;
             const offset = app.canvas.ds?.offset || [0, 0];
-            const x = (node.pos[0] + offset[0]) * scale + 8;
-            const y = (node.pos[1] + offset[1] + 70) * scale;
+            // Position inside the node, below title bar (~28px) and sockets
+            const titleH = 28;
+            const x = (node.pos[0] + offset[0]) * scale + 6 * scale;
+            const y = (node.pos[1] + offset[1] + titleH + 8) * scale;
+            const w = (node.size[0] - 12) * scale;
             container.style.left = x + "px";
             container.style.top = y + "px";
-            container.style.width = Math.max(200, (node.size[0] * scale - 24)) + "px";
+            container.style.width = Math.max(180, w) + "px";
         };
 
         const origDraw = node.onDrawForeground;
@@ -147,6 +134,6 @@ app.registerExtension({
             if (origRemoved) origRemoved.apply(this, arguments);
         };
 
-        setTimeout(() => { render(); hideNative(); updatePos(); }, 150);
+        setTimeout(() => { render(); hideNative(); updatePos(); }, 100);
     }
 });
