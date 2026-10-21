@@ -1,14 +1,14 @@
 import json
 from pathlib import Path
+from aiohttp import web
 import folder_paths
+from server import PromptServer
 
 class StierltzRaceClothes:
     @classmethod
     def INPUT_TYPES(cls):
         races = cls._list_races()
         clothes = cls._list_clothes()
-        if "elf" not in races:
-            races = ["elf"] + races
         return {
             "required": {
                 "race": (["none"] + races, {"default": "none"}),
@@ -76,11 +76,9 @@ class StierltzRaceClothes:
         races_dir = self._races_dir()
         clothes_dir = self._clothes_dir()
 
-        # Load existing
         race_data = self._load(races_dir, race)
         clothes_data = self._load(clothes_dir, clothes)
 
-        # If widget values differ from file, save them back
         if race != "none" and (race_positive or race_negative):
             changed = False
             if race_positive and race_positive != race_data.get("positive", ""):
@@ -97,7 +95,6 @@ class StierltzRaceClothes:
                 clothes_data["positive"] = clothes_positive
                 self._save(clothes_dir, clothes, clothes_data)
 
-        # Build output
         r_pos = race_data.get("positive") or race_positive or ""
         r_neg = race_data.get("negative") or race_negative or ""
         c_pos = clothes_data.get("positive") or clothes_positive or ""
@@ -113,7 +110,6 @@ class StierltzRaceClothes:
 
         positive = f"{gender}, " + ", ".join(parts) if parts else gender
         negative = r_neg.strip()
-
         return (positive, negative)
 
     @classmethod
@@ -121,69 +117,31 @@ class StierltzRaceClothes:
         return float("nan")
 
 
-class StierltzSaveRace:
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "name": ("STRING", {"default": "new_race"}),
-                "positive": ("STRING", {"multiline": True, "default": ""}),
-                "negative": ("STRING", {"multiline": True, "default": ""}),
-            }
-        }
+# API endpoints
+@PromptServer.instance.routes.get("/stierltz/race/{name}")
+async def get_race(request):
+    name = request.match_info["name"]
+    data = StierltzRaceClothes._load(StierltzRaceClothes._races_dir(), name)
+    return web.json_response(data)
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("status",)
-    FUNCTION = "save"
-    CATEGORY = "stierltz"
-    OUTPUT_NODE = True
+@PromptServer.instance.routes.get("/stierltz/clothes/{name}")
+async def get_clothes(request):
+    name = request.match_info["name"]
+    data = StierltzRaceClothes._load(StierltzRaceClothes._clothes_dir(), name)
+    return web.json_response(data)
 
-    def save(self, name, positive, negative):
-        if not name or not name.strip():
-            return ("error: empty name",)
-        name = name.strip().replace(" ", "_")
-        d = StierltzRaceClothes._races_dir()
-        p = d / f"{name}.json"
-        data = {"positive": positive, "negative": negative}
-        p.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-        return (f"saved race: {name}",)
-
-
-class StierltzSaveClothes:
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "name": ("STRING", {"default": "new_clothes"}),
-                "positive": ("STRING", {"multiline": True, "default": ""}),
-            }
-        }
-
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("status",)
-    FUNCTION = "save"
-    CATEGORY = "stierltz"
-    OUTPUT_NODE = True
-
-    def save(self, name, positive):
-        if not name or not name.strip():
-            return ("error: empty name",)
-        name = name.strip().replace(" ", "_")
-        d = StierltzRaceClothes._clothes_dir()
-        p = d / f"{name}.json"
-        data = {"positive": positive}
-        p.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-        return (f"saved clothes: {name}",)
+@PromptServer.instance.routes.get("/stierltz/list")
+async def list_all(request):
+    return web.json_response({
+        "races": StierltzRaceClothes._list_races(),
+        "clothes": StierltzRaceClothes._list_clothes(),
+    })
 
 
 NODE_CLASS_MAPPINGS = {
     "StierltzRaceClothes": StierltzRaceClothes,
-    "StierltzSaveRace": StierltzSaveRace,
-    "StierltzSaveClothes": StierltzSaveClothes,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "StierltzRaceClothes": "Stierltz Race & Clothes",
-    "StierltzSaveRace": "Stierltz Save Race",
-    "StierltzSaveClothes": "Stierltz Save Clothes",
 }
