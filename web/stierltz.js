@@ -43,6 +43,14 @@ app.registerExtension({
             return {};
         };
 
+        const refreshClothesOptions = async () => {
+            const list = await api("/stierltz/list");
+            const clothesW = getW("clothes");
+            if (clothesW && list.clothes) {
+                clothesW.options.values = ["none", ...list.clothes];
+            }
+        };
+
         const render = async () => {
             const isRace = node._tab === "race";
             styleBtn(raceBtn, isRace);
@@ -55,20 +63,25 @@ app.registerExtension({
             const negW = getW("race_negative");
             const clothesW = getW("clothes");
             const cposW = getW("clothes_positive");
+            const cnegW = getW("clothes_negative");
+
+            const gender = genderW?.value ? "male" : "female";
 
             if (isRace) {
                 const raceName = raceW?.value || "none";
                 const data = await api(`/stierltz/race/${raceName}`);
-                if (posW && data.positive !== undefined) posW.value = data.positive;
-                if (negW && data.negative !== undefined) negW.value = data.negative;
+                const gPos = data[`${gender}_positive`] || "";
+                const gNeg = data[`${gender}_negative`] || "";
+                if (posW) posW.value = gPos;
+                if (negW) negW.value = gNeg;
 
                 content.innerHTML = `
                     <div style="margin-bottom:6px;"><label style="font-size:11px;color:#aaa;">Race</label>
                         <select id="st_race" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;padding:4px;border-radius:3px;"></select></div>
                     <div style="margin-bottom:6px;"><label style="font-size:12px;"><input type="checkbox" id="st_gender"> Male</label></div>
-                    <div style="margin-bottom:6px;"><label style="font-size:11px;color:#aaa;">Positive</label>
+                    <div style="margin-bottom:6px;"><label style="font-size:11px;color:#aaa;">Positive (${gender})</label>
                         <textarea id="st_rpos" rows="3" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;border-radius:3px;resize:vertical;font-size:11px;"></textarea></div>
-                    <div style="margin-bottom:6px;"><label style="font-size:11px;color:#aaa;">Negative</label>
+                    <div style="margin-bottom:6px;"><label style="font-size:11px;color:#aaa;">Negative (${gender})</label>
                         <textarea id="st_rneg" rows="2" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;border-radius:3px;resize:vertical;font-size:11px;"></textarea></div>
                     <button id="st_new_race" style="width:100%;padding:5px;background:#3a5a3a;color:#fff;border:none;border-radius:3px;cursor:pointer;">+ New Race</button>
                 `;
@@ -83,23 +96,27 @@ app.registerExtension({
                     sel.onchange = async () => { raceW.value = sel.value; await render(); };
                 }
                 const cb = content.querySelector("#st_gender");
-                if (genderW && cb) { cb.checked = !!genderW.value; cb.onchange = () => { genderW.value = cb.checked; }; }
+                if (genderW && cb) {
+                    cb.checked = !!genderW.value;
+                    cb.onchange = async () => { genderW.value = cb.checked; await render(); };
+                }
                 const tp = content.querySelector("#st_rpos");
-                if (posW && tp) { tp.value = data.positive || posW.value || ""; tp.oninput = () => { posW.value = tp.value; }; }
+                if (tp) { tp.value = gPos; tp.oninput = () => { if (posW) posW.value = tp.value; }; }
                 const tn = content.querySelector("#st_rneg");
-                if (negW && tn) { tn.value = data.negative || negW.value || ""; tn.oninput = () => { negW.value = tn.value; }; }
+                if (tn) { tn.value = gNeg; tn.oninput = () => { if (negW) negW.value = tn.value; }; }
                 content.querySelector("#st_new_race").onclick = async () => {
                     const name = prompt("New race name:");
                     if (!name) return;
                     const pos = content.querySelector("#st_rpos").value;
                     const neg = content.querySelector("#st_rneg").value;
-                    await api(`/stierltz/save_race`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({name, positive:pos, negative:neg})});
+                    await api(`/stierltz/save_race`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({name, positive:pos, negative:neg, gender})});
                     alert("Saved: " + name);
                 };
             } else {
                 const clothesName = clothesW?.value || "none";
                 const data = await api(`/stierltz/clothes/${clothesName}`);
-                if (cposW && data.positive !== undefined) cposW.value = data.positive;
+                if (cposW) cposW.value = data.positive || "";
+                if (cnegW) cnegW.value = data.negative || "";
 
                 content.innerHTML = `
                     <div style="margin-bottom:6px;"><label style="font-size:11px;color:#aaa;">Clothes</label>
@@ -121,17 +138,21 @@ app.registerExtension({
                     sel.onchange = async () => { clothesW.value = sel.value; await render(); };
                 }
                 const tc = content.querySelector("#st_cpos");
-                if (cposW && tc) { tc.value = data.positive || cposW.value || ""; tc.oninput = () => { cposW.value = tc.value; }; }
-                const cnegW = getW("clothes_negative");
+                if (tc) { tc.value = data.positive || ""; tc.oninput = () => { if (cposW) cposW.value = tc.value; }; }
                 const tn = content.querySelector("#st_cneg");
-                if (cnegW && tn) { tn.value = data.negative || cnegW.value || ""; tn.oninput = () => { cnegW.value = tn.value; }; }
+                if (tn) { tn.value = data.negative || ""; tn.oninput = () => { if (cnegW) cnegW.value = tn.value; }; }
                 content.querySelector("#st_new_clothes").onclick = async () => {
                     const name = prompt("New clothes name:");
                     if (!name) return;
                     const pos = content.querySelector("#st_cpos").value;
                     const neg = content.querySelector("#st_cneg").value;
-                    await api(`/stierltz/save_clothes`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({name, positive:pos, negative:neg})});
+                    const result = await api(`/stierltz/save_clothes`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({name, positive:pos, negative:neg})});
+                    if (result.list && clothesW) {
+                        clothesW.options.values = ["none", ...result.list];
+                    }
+                    await refreshClothesOptions();
                     alert("Saved: " + name);
+                    await render();
                 };
             }
         };
@@ -144,7 +165,7 @@ app.registerExtension({
             for (const w of node.widgets || []) {
                 if (hide.includes(w.name)) w.hidden = true;
             }
-            node.setSize([Math.max(node.size[0], 340), 480]);
+            node.setSize([Math.max(node.size[0], 340), 500]);
         };
 
         const updatePos = () => {

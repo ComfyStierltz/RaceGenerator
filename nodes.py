@@ -80,17 +80,23 @@ class StierltzRaceClothes:
         race_data = self._load(races_dir, race)
         clothes_data = self._load(clothes_dir, clothes)
 
-        if race != "none" and (race_positive or race_negative):
+        gender = "male" if gender_male else "female"
+
+        # Save race changes (gender-specific)
+        if race != "none":
+            key_pos = f"{gender}_positive"
+            key_neg = f"{gender}_negative"
             changed = False
-            if race_positive and race_positive != race_data.get("positive", ""):
-                race_data["positive"] = race_positive
+            if race_positive and race_positive != race_data.get(key_pos, ""):
+                race_data[key_pos] = race_positive
                 changed = True
-            if race_negative and race_negative != race_data.get("negative", ""):
-                race_data["negative"] = race_negative
+            if race_negative and race_negative != race_data.get(key_neg, ""):
+                race_data[key_neg] = race_negative
                 changed = True
             if changed:
                 self._save(races_dir, race, race_data)
 
+        # Save clothes changes
         if clothes != "none" and (clothes_positive or clothes_negative):
             changed = False
             if clothes_positive and clothes_positive != clothes_data.get("positive", ""):
@@ -102,19 +108,19 @@ class StierltzRaceClothes:
             if changed:
                 self._save(clothes_dir, clothes, clothes_data)
 
-        r_pos = race_data.get("positive") or race_positive or ""
-        r_neg = race_data.get("negative") or race_negative or ""
+        # Build output using gender-specific race prompts
+        r_pos = race_data.get(f"{gender}_positive") or race_positive or ""
+        r_neg = race_data.get(f"{gender}_negative") or race_negative or ""
         c_pos = clothes_data.get("positive") or clothes_positive or ""
         c_neg = clothes_data.get("negative") or clothes_negative or ""
 
-        gender = "male" if gender_male else "female"
         parts = []
         if r_pos.strip():
             parts.append(r_pos.strip())
         if c_pos.strip() and clothes != "none":
             parts.append(c_pos.strip())
-        else:
-            parts.append("completely nude, no clothes, naked")
+        elif clothes == "none":
+            parts.append("completely nude, no clothes, naked, bare skin")
 
         positive = f"{gender}, " + ", ".join(parts) if parts else gender
         negative = ", ".join(filter(None, [r_neg.strip(), c_neg.strip()]))
@@ -125,7 +131,6 @@ class StierltzRaceClothes:
         return float("nan")
 
 
-# API endpoints
 @PromptServer.instance.routes.get("/stierltz/race/{name}")
 async def get_race(request):
     name = request.match_info["name"]
@@ -145,16 +150,6 @@ async def list_all(request):
         "clothes": StierltzRaceClothes._list_clothes(),
     })
 
-
-NODE_CLASS_MAPPINGS = {
-    "StierltzRaceClothes": StierltzRaceClothes,
-}
-
-NODE_DISPLAY_NAME_MAPPINGS = {
-    "StierltzRaceClothes": "Stierltz Race & Clothes",
-}
-
-
 @PromptServer.instance.routes.post("/stierltz/save_race")
 async def save_race(request):
     data = await request.json()
@@ -163,10 +158,17 @@ async def save_race(request):
         return web.json_response({"error": "empty name"}, status=400)
     d = StierltzRaceClothes._races_dir()
     p = d / f"{name}.json"
-    out = {"positive": data.get("positive", ""), "negative": data.get("negative", "")}
-    p.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
+    existing = {}
+    if p.exists():
+        try:
+            existing = json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    gender = data.get("gender", "female")
+    existing[f"{gender}_positive"] = data.get("positive", "")
+    existing[f"{gender}_negative"] = data.get("negative", "")
+    p.write_text(json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
     return web.json_response({"saved": name})
-
 
 @PromptServer.instance.routes.post("/stierltz/save_clothes")
 async def save_clothes(request):
@@ -178,4 +180,4 @@ async def save_clothes(request):
     p = d / f"{name}.json"
     out = {"positive": data.get("positive", ""), "negative": data.get("negative", "")}
     p.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
-    return web.json_response({"saved": name})
+    return web.json_response({"saved": name, "list": StierltzRaceClothes._list_clothes()})
