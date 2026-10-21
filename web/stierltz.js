@@ -105,7 +105,9 @@ app.registerExtension({
                     <div style="margin-bottom:6px;"><label style="font-size:11px;color:#aaa;">Clothes</label>
                         <select id="st_clothes" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;padding:4px;border-radius:3px;"></select></div>
                     <div style="margin-bottom:6px;"><label style="font-size:11px;color:#aaa;">Clothes Positive</label>
-                        <textarea id="st_cpos" rows="3" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;border-radius:3px;resize:vertical;font-size:11px;"></textarea></div>
+                        <textarea id="st_cpos" rows="2" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;border-radius:3px;resize:vertical;font-size:11px;"></textarea></div>
+                    <div style="margin-bottom:6px;"><label style="font-size:11px;color:#aaa;">Clothes Negative</label>
+                        <textarea id="st_cneg" rows="2" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;border-radius:3px;resize:vertical;font-size:11px;"></textarea></div>
                     <button id="st_new_clothes" style="width:100%;padding:5px;background:#3a5a3a;color:#fff;border:none;border-radius:3px;cursor:pointer;">+ New Clothes</button>
                 `;
                 const sel = content.querySelector("#st_clothes");
@@ -120,11 +122,15 @@ app.registerExtension({
                 }
                 const tc = content.querySelector("#st_cpos");
                 if (cposW && tc) { tc.value = data.positive || cposW.value || ""; tc.oninput = () => { cposW.value = tc.value; }; }
+                const cnegW = getW("clothes_negative");
+                const tn = content.querySelector("#st_cneg");
+                if (cnegW && tn) { tn.value = data.negative || cnegW.value || ""; tn.oninput = () => { cnegW.value = tn.value; }; }
                 content.querySelector("#st_new_clothes").onclick = async () => {
                     const name = prompt("New clothes name:");
                     if (!name) return;
                     const pos = content.querySelector("#st_cpos").value;
-                    await api(`/stierltz/save_clothes`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({name, positive:pos})});
+                    const neg = content.querySelector("#st_cneg").value;
+                    await api(`/stierltz/save_clothes`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({name, positive:pos, negative:neg})});
                     alert("Saved: " + name);
                 };
             }
@@ -134,7 +140,7 @@ app.registerExtension({
         clothesBtn.onclick = () => { node._tab = "clothes"; render(); };
 
         const hideNative = () => {
-            const hide = ["race","clothes","gender_male","race_positive","race_negative","clothes_positive","tab"];
+            const hide = ["race","clothes","gender_male","race_positive","race_negative","clothes_positive","clothes_negative","tab"];
             for (const w of node.widgets || []) {
                 if (hide.includes(w.name)) w.hidden = true;
             }

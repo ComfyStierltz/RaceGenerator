@@ -19,6 +19,7 @@ class StierltzRaceClothes:
                 "race_positive": ("STRING", {"multiline": True, "default": ""}),
                 "race_negative": ("STRING", {"multiline": True, "default": ""}),
                 "clothes_positive": ("STRING", {"multiline": True, "default": ""}),
+                "clothes_negative": ("STRING", {"multiline": True, "default": ""}),
             }
         }
 
@@ -72,7 +73,7 @@ class StierltzRaceClothes:
         p = folder / f"{name}.json"
         p.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    def build(self, race, clothes, gender_male, race_positive="", race_negative="", clothes_positive=""):
+    def build(self, race, clothes, gender_male, race_positive="", race_negative="", clothes_positive="", clothes_negative=""):
         races_dir = self._races_dir()
         clothes_dir = self._clothes_dir()
 
@@ -90,14 +91,21 @@ class StierltzRaceClothes:
             if changed:
                 self._save(races_dir, race, race_data)
 
-        if clothes != "none" and clothes_positive:
-            if clothes_positive != clothes_data.get("positive", ""):
+        if clothes != "none" and (clothes_positive or clothes_negative):
+            changed = False
+            if clothes_positive and clothes_positive != clothes_data.get("positive", ""):
                 clothes_data["positive"] = clothes_positive
+                changed = True
+            if clothes_negative and clothes_negative != clothes_data.get("negative", ""):
+                clothes_data["negative"] = clothes_negative
+                changed = True
+            if changed:
                 self._save(clothes_dir, clothes, clothes_data)
 
         r_pos = race_data.get("positive") or race_positive or ""
         r_neg = race_data.get("negative") or race_negative or ""
         c_pos = clothes_data.get("positive") or clothes_positive or ""
+        c_neg = clothes_data.get("negative") or clothes_negative or ""
 
         gender = "male" if gender_male else "female"
         parts = []
@@ -109,7 +117,7 @@ class StierltzRaceClothes:
             parts.append("completely nude, no clothes, naked")
 
         positive = f"{gender}, " + ", ".join(parts) if parts else gender
-        negative = r_neg.strip()
+        negative = ", ".join(filter(None, [r_neg.strip(), c_neg.strip()]))
         return (positive, negative)
 
     @classmethod
@@ -168,6 +176,6 @@ async def save_clothes(request):
         return web.json_response({"error": "empty name"}, status=400)
     d = StierltzRaceClothes._clothes_dir()
     p = d / f"{name}.json"
-    out = {"positive": data.get("positive", "")}
+    out = {"positive": data.get("positive", ""), "negative": data.get("negative", "")}
     p.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
     return web.json_response({"saved": name})
