@@ -1,24 +1,14 @@
 import json
-import os
 from pathlib import Path
 import folder_paths
 
 class StierltzRaceClothes:
-    """
-    Race & Clothes preset node.
-    - Races stored in input/stierltz/races/<name>.json
-    - Clothes stored in input/stierltz/clothes/<name>.json
-    - Output: combined positive / negative prompts
-    """
-
     @classmethod
     def INPUT_TYPES(cls):
         races = cls._list_races()
         clothes = cls._list_clothes()
         if "elf" not in races:
             races = ["elf"] + races
-        if "dwarf" not in races:
-            races = ["dwarf"] + races
         return {
             "required": {
                 "race": (["none"] + races, {"default": "none"}),
@@ -26,9 +16,9 @@ class StierltzRaceClothes:
                 "gender_male": ("BOOLEAN", {"default": False, "label_on": "male", "label_off": "female"}),
             },
             "optional": {
-                "race_positive": ("STRING", {"multiline": True, "default": "", "label": "Race Positive"}),
-                "race_negative": ("STRING", {"multiline": True, "default": "", "label": "Race Negative"}),
-                "clothes_positive": ("STRING", {"multiline": True, "default": "", "label": "Clothes Positive"}),
+                "race_positive": ("STRING", {"multiline": True, "default": ""}),
+                "race_negative": ("STRING", {"multiline": True, "default": ""}),
+                "clothes_positive": ("STRING", {"multiline": True, "default": ""}),
             }
         }
 
@@ -57,16 +47,14 @@ class StierltzRaceClothes:
 
     @classmethod
     def _list_races(cls):
-        d = cls._races_dir()
-        return sorted([f.stem for f in d.glob("*.json")])
+        return sorted([f.stem for f in cls._races_dir().glob("*.json")])
 
     @classmethod
     def _list_clothes(cls):
-        d = cls._clothes_dir()
-        return sorted([f.stem for f in d.glob("*.json")])
+        return sorted([f.stem for f in cls._clothes_dir().glob("*.json")])
 
     @classmethod
-    def _load_json(cls, folder: Path, name: str):
+    def _load(cls, folder: Path, name: str):
         if not name or name == "none":
             return {}
         p = folder / f"{name}.json"
@@ -77,21 +65,44 @@ class StierltzRaceClothes:
                 return {}
         return {}
 
+    @classmethod
+    def _save(cls, folder: Path, name: str, data: dict):
+        if not name or name == "none":
+            return
+        p = folder / f"{name}.json"
+        p.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
     def build(self, race, clothes, gender_male, race_positive="", race_negative="", clothes_positive=""):
         races_dir = self._races_dir()
         clothes_dir = self._clothes_dir()
 
-        race_data = self._load_json(races_dir, race)
-        clothes_data = self._load_json(clothes_dir, clothes)
+        # Load existing
+        race_data = self._load(races_dir, race)
+        clothes_data = self._load(clothes_dir, clothes)
 
-        # Prefer file data, fall back to widget values (for live editing)
+        # If widget values differ from file, save them back
+        if race != "none" and (race_positive or race_negative):
+            changed = False
+            if race_positive and race_positive != race_data.get("positive", ""):
+                race_data["positive"] = race_positive
+                changed = True
+            if race_negative and race_negative != race_data.get("negative", ""):
+                race_data["negative"] = race_negative
+                changed = True
+            if changed:
+                self._save(races_dir, race, race_data)
+
+        if clothes != "none" and clothes_positive:
+            if clothes_positive != clothes_data.get("positive", ""):
+                clothes_data["positive"] = clothes_positive
+                self._save(clothes_dir, clothes, clothes_data)
+
+        # Build output
         r_pos = race_data.get("positive") or race_positive or ""
         r_neg = race_data.get("negative") or race_negative or ""
         c_pos = clothes_data.get("positive") or clothes_positive or ""
 
         gender = "male" if gender_male else "female"
-
-        # Build positive
         parts = []
         if r_pos.strip():
             parts.append(r_pos.strip())
@@ -100,12 +111,8 @@ class StierltzRaceClothes:
         else:
             parts.append("completely nude, no clothes, naked")
 
-        positive = ", ".join(parts)
-        if gender:
-            positive = f"{gender}, {positive}"
-
-        # Negative
-        negative = r_neg.strip() if r_neg.strip() else ""
+        positive = f"{gender}, " + ", ".join(parts) if parts else gender
+        negative = r_neg.strip()
 
         return (positive, negative)
 
@@ -132,7 +139,7 @@ class StierltzSaveRace:
     OUTPUT_NODE = True
 
     def save(self, name, positive, negative):
-        if not name or name.strip() == "":
+        if not name or not name.strip():
             return ("error: empty name",)
         name = name.strip().replace(" ", "_")
         d = StierltzRaceClothes._races_dir()
@@ -159,7 +166,7 @@ class StierltzSaveClothes:
     OUTPUT_NODE = True
 
     def save(self, name, positive):
-        if not name or name.strip() == "":
+        if not name or not name.strip():
             return ("error: empty name",)
         name = name.strip().replace(" ", "_")
         d = StierltzRaceClothes._clothes_dir()
