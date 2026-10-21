@@ -1,0 +1,7 @@
+{
+  "name": "stierltz",
+  "version": "1.0.0",
+  "description": "Race & Clothes Preset Node for ComfyUI - stores races and clothes as separate JSON files",
+  "author": "stierltz",
+  "license": "MIT"
+}
