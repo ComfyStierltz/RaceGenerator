@@ -161,7 +161,7 @@
         "Node name for S&R": "StierltzRaceClothes"
       },
       "widgets_values": [
-        "elf",
+        "none",
         "none",
         false,
         "",
@@ -169,7 +169,7 @@
         ""
       ],
       "widgets_values_named": {
-        "race": "elf",
+        "race": "none",
         "clothes": "none",
         "gender_male": false,
         "race_positive": "",
@@ -443,7 +443,7 @@
       ],
       "size": [
         300,
-        100
+        270
       ],
       "flags": {},
       "order": 9,
@@ -618,10 +618,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.967242637921032,
+      "scale": 1.2873999510728946,
       "offset": [
-        -449.8143867303348,
-        139.35349664902142
+        283.4728807650593,
+        -444.3807562612297
       ]
     },
     "frontendVersion": "1.55.17",

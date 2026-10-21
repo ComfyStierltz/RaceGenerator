@@ -15,6 +15,10 @@ class StierltzRaceClothes:
     def INPUT_TYPES(cls):
         races = cls._list_races()
         clothes = cls._list_clothes()
+        if "elf" not in races:
+            races = ["elf"] + races
+        if "dwarf" not in races:
+            races = ["dwarf"] + races
         return {
             "required": {
                 "race": (["none"] + races, {"default": "none"}),
@@ -22,9 +26,9 @@ class StierltzRaceClothes:
                 "gender_male": ("BOOLEAN", {"default": False, "label_on": "male", "label_off": "female"}),
             },
             "optional": {
-                "race_positive": ("STRING", {"multiline": True, "default": ""}),
-                "race_negative": ("STRING", {"multiline": True, "default": ""}),
-                "clothes_positive": ("STRING", {"multiline": True, "default": ""}),
+                "race_positive": ("STRING", {"multiline": True, "default": "", "label": "Race Positive"}),
+                "race_negative": ("STRING", {"multiline": True, "default": "", "label": "Race Negative"}),
+                "clothes_positive": ("STRING", {"multiline": True, "default": "", "label": "Clothes Positive"}),
             }
         }
 
