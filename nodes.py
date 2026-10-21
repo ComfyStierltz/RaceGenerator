@@ -1,8 +1,7 @@
 import json
 from pathlib import Path
-from aiohttp import web
+
 import folder_paths
-from server import PromptServer
 
 class StierltzRaceClothes:
     @classmethod
@@ -48,11 +47,17 @@ class StierltzRaceClothes:
 
     @classmethod
     def _list_races(cls):
-        return sorted([f.stem for f in cls._races_dir().glob("*.json")])
+        try:
+            return sorted([f.stem for f in cls._races_dir().glob("*.json")])
+        except Exception:
+            return []
 
     @classmethod
     def _list_clothes(cls):
-        return sorted([f.stem for f in cls._clothes_dir().glob("*.json")])
+        try:
+            return sorted([f.stem for f in cls._clothes_dir().glob("*.json")])
+        except Exception:
+            return []
 
     @classmethod
     def _load(cls, folder: Path, name: str):
@@ -82,7 +87,6 @@ class StierltzRaceClothes:
 
         gender = "male" if gender_male else "female"
 
-        # Save race changes (gender-specific)
         if race != "none":
             key_pos = f"{gender}_positive"
             key_neg = f"{gender}_negative"
@@ -96,7 +100,6 @@ class StierltzRaceClothes:
             if changed:
                 self._save(races_dir, race, race_data)
 
-        # Save clothes changes
         if clothes != "none" and (clothes_positive or clothes_negative):
             changed = False
             if clothes_positive and clothes_positive != clothes_data.get("positive", ""):
@@ -108,7 +111,6 @@ class StierltzRaceClothes:
             if changed:
                 self._save(clothes_dir, clothes, clothes_data)
 
-        # Build output using gender-specific race prompts
         r_pos = race_data.get(f"{gender}_positive") or race_positive or ""
         r_neg = race_data.get(f"{gender}_negative") or race_negative or ""
         c_pos = clothes_data.get("positive") or clothes_positive or ""
@@ -131,53 +133,77 @@ class StierltzRaceClothes:
         return float("nan")
 
 
-@PromptServer.instance.routes.get("/stierltz/race/{name}")
-async def get_race(request):
-    name = request.match_info["name"]
-    data = StierltzRaceClothes._load(StierltzRaceClothes._races_dir(), name)
-    return web.json_response(data)
+NODE_CLASS_MAPPINGS = {
+    "StierltzRaceClothes": StierltzRaceClothes,
+}
 
-@PromptServer.instance.routes.get("/stierltz/clothes/{name}")
-async def get_clothes(request):
-    name = request.match_info["name"]
-    data = StierltzRaceClothes._load(StierltzRaceClothes._clothes_dir(), name)
-    return web.json_response(data)
+NODE_DISPLAY_NAME_MAPPINGS = {
+    "StierltzRaceClothes": "Stierltz Race & Clothes",
+}
 
-@PromptServer.instance.routes.get("/stierltz/list")
-async def list_all(request):
-    return web.json_response({
-        "races": StierltzRaceClothes._list_races(),
-        "clothes": StierltzRaceClothes._list_clothes(),
-    })
 
-@PromptServer.instance.routes.post("/stierltz/save_race")
-async def save_race(request):
-    data = await request.json()
-    name = data.get("name", "").strip().replace(" ", "_")
-    if not name:
-        return web.json_response({"error": "empty name"}, status=400)
-    d = StierltzRaceClothes._races_dir()
-    p = d / f"{name}.json"
-    existing = {}
-    if p.exists():
-        try:
-            existing = json.loads(p.read_text(encoding="utf-8"))
-        except Exception:
-            pass
-    gender = data.get("gender", "female")
-    existing[f"{gender}_positive"] = data.get("positive", "")
-    existing[f"{gender}_negative"] = data.get("negative", "")
-    p.write_text(json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
-    return web.json_response({"saved": name})
+def setup_routes():
+    try:
+        from server import PromptServer
+        from aiohttp import web
+    except ImportError:
+        return
 
-@PromptServer.instance.routes.post("/stierltz/save_clothes")
-async def save_clothes(request):
-    data = await request.json()
-    name = data.get("name", "").strip().replace(" ", "_")
-    if not name:
-        return web.json_response({"error": "empty name"}, status=400)
-    d = StierltzRaceClothes._clothes_dir()
-    p = d / f"{name}.json"
-    out = {"positive": data.get("positive", ""), "negative": data.get("negative", "")}
-    p.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
-    return web.json_response({"saved": name, "list": StierltzRaceClothes._list_clothes()})
+    if PromptServer.instance is None:
+        return
+
+    @PromptServer.instance.routes.get("/stierltz/race/{name}")
+    async def get_race(request):
+        name = request.match_info["name"]
+        data = StierltzRaceClothes._load(StierltzRaceClothes._races_dir(), name)
+        return web.json_response(data)
+
+    @PromptServer.instance.routes.get("/stierltz/clothes/{name}")
+    async def get_clothes(request):
+        name = request.match_info["name"]
+        data = StierltzRaceClothes._load(StierltzRaceClothes._clothes_dir(), name)
+        return web.json_response(data)
+
+    @PromptServer.instance.routes.get("/stierltz/list")
+    async def list_all(request):
+        return web.json_response({
+            "races": StierltzRaceClothes._list_races(),
+            "clothes": StierltzRaceClothes._list_clothes(),
+        })
+
+    @PromptServer.instance.routes.post("/stierltz/save_race")
+    async def save_race(request):
+        data = await request.json()
+        name = data.get("name", "").strip().replace(" ", "_")
+        if not name:
+            return web.json_response({"error": "empty name"}, status=400)
+        d = StierltzRaceClothes._races_dir()
+        p = d / f"{name}.json"
+        existing = {}
+        if p.exists():
+            try:
+                existing = json.loads(p.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+        gender = data.get("gender", "female")
+        existing[f"{gender}_positive"] = data.get("positive", "")
+        existing[f"{gender}_negative"] = data.get("negative", "")
+        p.write_text(json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
+        return web.json_response({"saved": name})
+
+    @PromptServer.instance.routes.post("/stierltz/save_clothes")
+    async def save_clothes(request):
+        data = await request.json()
+        name = data.get("name", "").strip().replace(" ", "_")
+        if not name:
+            return web.json_response({"error": "empty name"}, status=400)
+        d = StierltzRaceClothes._clothes_dir()
+        p = d / f"{name}.json"
+        out = {"positive": data.get("positive", ""), "negative": data.get("negative", "")}
+        p.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
+        return web.json_response({"saved": name, "list": StierltzRaceClothes._list_clothes()})
+
+try:
+    setup_routes()
+except Exception as e:
+    print(f"[stierltz] route setup failed: {e}")
