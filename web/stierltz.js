@@ -32,20 +32,40 @@ app.registerExtension({
         document.body.appendChild(container);
 
         node._tab = "race";
+        node._lastRace = "";
 
         const getW = (name) => node.widgets?.find(w => w.name === name);
 
-        const render = () => {
+        const loadRaceData = async (raceName) => {
+            if (!raceName || raceName === "none") return { positive: "", negative: "" };
+            try {
+                const r = await fetch(`/input/stierltz/races/${raceName}.json`);
+                if (r.ok) return await r.json();
+            } catch (e) {}
+            return { positive: "", negative: "" };
+        };
+
+        const render = async () => {
             content.innerHTML = "";
             const isRace = node._tab === "race";
             styleBtn(raceBtn, isRace);
             styleBtn(clothesBtn, !isRace);
 
+            const raceW = getW("race");
+            const genderW = getW("gender_male");
+            const posW = getW("race_positive");
+            const negW = getW("race_negative");
+            const clothesW = getW("clothes");
+            const cposW = getW("clothes_positive");
+
             if (isRace) {
-                const raceW = getW("race");
-                const genderW = getW("gender_male");
-                const posW = getW("race_positive");
-                const negW = getW("race_negative");
+                const raceName = raceW?.value || "none";
+                if (raceName !== node._lastRace) {
+                    const data = await loadRaceData(raceName);
+                    if (posW) posW.value = data.positive || "";
+                    if (negW) negW.value = data.negative || "";
+                    node._lastRace = raceName;
+                }
                 content.innerHTML = `
                     <div style="margin-bottom:6px;"><label style="font-size:11px; color:#aaa;">Race</label>
                         <select id="st_race" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;padding:4px;border-radius:3px;"></select></div>
@@ -63,7 +83,11 @@ app.registerExtension({
                         if (v === raceW.value) o.selected = true;
                         sel.appendChild(o);
                     });
-                    sel.onchange = () => { raceW.value = sel.value; };
+                    sel.onchange = async () => {
+                        raceW.value = sel.value;
+                        node._lastRace = "";
+                        await render();
+                    };
                 }
                 const cb = content.querySelector("#st_gender");
                 if (genderW && cb) { cb.checked = !!genderW.value; cb.onchange = () => { genderW.value = cb.checked; }; }
@@ -72,8 +96,6 @@ app.registerExtension({
                 const tn = content.querySelector("#st_rneg");
                 if (negW && tn) { tn.value = negW.value || ""; tn.oninput = () => { negW.value = tn.value; }; }
             } else {
-                const clothesW = getW("clothes");
-                const cposW = getW("clothes_positive");
                 content.innerHTML = `
                     <div style="margin-bottom:6px;"><label style="font-size:11px; color:#aaa;">Clothes</label>
                         <select id="st_clothes" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;padding:4px;border-radius:3px;"></select></div>
@@ -103,16 +125,14 @@ app.registerExtension({
             for (const w of node.widgets || []) {
                 if (hide.includes(w.name)) w.hidden = true;
             }
-            // Make node tall enough to contain the overlay
-            node.setSize([Math.max(node.size[0], 320), 340]);
+            node.setSize([Math.max(node.size[0], 320), 360]);
         };
 
         const updatePos = () => {
             if (!node.pos || !app.canvas) return;
             const scale = app.canvas.ds?.scale || 1;
             const offset = app.canvas.ds?.offset || [0, 0];
-            // Below title (~30) + socket row (~36)
-            const topOffset = 68;
+            const topOffset = 72;
             const x = (node.pos[0] + offset[0]) * scale + 8 * scale;
             const y = (node.pos[1] + offset[1] + topOffset) * scale;
             const w = (node.size[0] - 16) * scale;
@@ -133,6 +153,6 @@ app.registerExtension({
             if (origRemoved) origRemoved.apply(this, arguments);
         };
 
-        setTimeout(() => { render(); hideNative(); updatePos(); }, 100);
+        setTimeout(() => { render(); hideNative(); updatePos(); }, 150);
     }
 });
