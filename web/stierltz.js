@@ -1,7 +1,6 @@
 import { app } from "../../../scripts/app.js";
-console.log("[stierltz] extension loading...");
 
-const TAB_H = 32;
+const TAB_H = 36;
 
 app.registerExtension({
     name: "stierltz.RaceClothesTabs",
@@ -15,41 +14,42 @@ app.registerExtension({
             { id: "clothes", label: "Clothes" }
         ];
 
-        // Force redraw
-        const origDraw = node.onDrawForeground;
-        node.onDrawForeground = function (ctx) {
-            if (origDraw) origDraw.apply(this, arguments);
-
-            if (!this._tabs) return;
-            const w = this.size[0];
-            const tabW = w / this._tabs.length;
-
-            ctx.save();
-            ctx.font = "bold 13px sans-serif";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-
-            this._tabs.forEach((tab, i) => {
-                const x = i * tabW;
-                const active = this._tab === tab.id;
-
-                // Background
-                ctx.fillStyle = active ? "#5a3d8a" : "#333";
-                ctx.fillRect(x, 0, tabW, TAB_H);
-
-                // Border
-                ctx.strokeStyle = active ? "#a78bfa" : "#555";
-                ctx.lineWidth = active ? 2 : 1;
-                ctx.strokeRect(x + 0.5, 0.5, tabW - 1, TAB_H - 1);
-
-                // Label
-                ctx.fillStyle = active ? "#fff" : "#bbb";
-                ctx.fillText(tab.label, x + tabW / 2, TAB_H / 2);
-            });
-            ctx.restore();
+        // Increase node height to make room for tabs
+        const origComputeSize = node.computeSize;
+        node.computeSize = function () {
+            const size = origComputeSize ? origComputeSize.apply(this, arguments) : [340, 200];
+            size[1] = Math.max(size[1], 280) + TAB_H;
+            return size;
         };
 
-        // Click handling
+        // Draw tabs at the top, content below
+        const origDraw = node.onDrawForeground;
+        node.onDrawForeground = function (ctx) {
+            // Draw tabs first (at y=0)
+            if (this._tabs) {
+                const w = this.size[0];
+                const tabW = w / this._tabs.length;
+                ctx.save();
+                ctx.font = "bold 14px sans-serif";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                this._tabs.forEach((tab, i) => {
+                    const x = i * tabW;
+                    const active = this._tab === tab.id;
+                    ctx.fillStyle = active ? "#5a3d8a" : "#2a2a2a";
+                    ctx.fillRect(x, 0, tabW, TAB_H);
+                    ctx.strokeStyle = active ? "#c4b5fd" : "#555";
+                    ctx.lineWidth = active ? 2 : 1;
+                    ctx.strokeRect(x + 0.5, 0.5, tabW - 1, TAB_H - 1);
+                    ctx.fillStyle = active ? "#fff" : "#aaa";
+                    ctx.fillText(tab.label, x + tabW / 2, TAB_H / 2);
+                });
+                ctx.restore();
+            }
+            if (origDraw) origDraw.apply(this, arguments);
+        };
+
+        // Click on tabs
         const origMouse = node.onMouseDown;
         node.onMouseDown = function (e, localPos) {
             if (localPos && localPos[1] < TAB_H && this._tabs) {
@@ -72,11 +72,9 @@ app.registerExtension({
                 if (raceOnly.includes(w.name)) w.hidden = this._tab !== "race";
                 if (clothesOnly.includes(w.name)) w.hidden = this._tab !== "clothes";
             }
-            // Recompute size so hidden widgets don't leave empty space
             this.setSize(this.computeSize());
         };
 
-        // Initial apply
-        setTimeout(() => node._applyVisibility?.(), 150);
+        setTimeout(() => node._applyVisibility?.(), 100);
     }
 });
