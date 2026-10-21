@@ -145,3 +145,29 @@ NODE_CLASS_MAPPINGS = {
 NODE_DISPLAY_NAME_MAPPINGS = {
     "StierltzRaceClothes": "Stierltz Race & Clothes",
 }
+
+
+@PromptServer.instance.routes.post("/stierltz/save_race")
+async def save_race(request):
+    data = await request.json()
+    name = data.get("name", "").strip().replace(" ", "_")
+    if not name:
+        return web.json_response({"error": "empty name"}, status=400)
+    d = StierltzRaceClothes._races_dir()
+    p = d / f"{name}.json"
+    out = {"positive": data.get("positive", ""), "negative": data.get("negative", "")}
+    p.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
+    return web.json_response({"saved": name})
+
+
+@PromptServer.instance.routes.post("/stierltz/save_clothes")
+async def save_clothes(request):
+    data = await request.json()
+    name = data.get("name", "").strip().replace(" ", "_")
+    if not name:
+        return web.json_response({"error": "empty name"}, status=400)
+    d = StierltzRaceClothes._clothes_dir()
+    p = d / f"{name}.json"
+    out = {"positive": data.get("positive", "")}
+    p.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
+    return web.json_response({"saved": name})

@@ -35,9 +35,9 @@ app.registerExtension({
 
         const getW = (name) => node.widgets?.find(w => w.name === name);
 
-        const api = async (path) => {
+        const api = async (path, opts) => {
             try {
-                const r = await fetch(path);
+                const r = await fetch(path, opts);
                 if (r.ok) return await r.json();
             } catch(e) { console.warn("[stierltz]", e); }
             return {};
@@ -67,9 +67,10 @@ app.registerExtension({
                         <select id="st_race" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;padding:4px;border-radius:3px;"></select></div>
                     <div style="margin-bottom:6px;"><label style="font-size:12px;"><input type="checkbox" id="st_gender"> Male</label></div>
                     <div style="margin-bottom:6px;"><label style="font-size:11px;color:#aaa;">Positive</label>
-                        <textarea id="st_rpos" rows="4" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;border-radius:3px;resize:vertical;font-size:11px;"></textarea></div>
-                    <div><label style="font-size:11px;color:#aaa;">Negative</label>
-                        <textarea id="st_rneg" rows="3" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;border-radius:3px;resize:vertical;font-size:11px;"></textarea></div>
+                        <textarea id="st_rpos" rows="3" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;border-radius:3px;resize:vertical;font-size:11px;"></textarea></div>
+                    <div style="margin-bottom:6px;"><label style="font-size:11px;color:#aaa;">Negative</label>
+                        <textarea id="st_rneg" rows="2" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;border-radius:3px;resize:vertical;font-size:11px;"></textarea></div>
+                    <button id="st_new_race" style="width:100%;padding:5px;background:#3a5a3a;color:#fff;border:none;border-radius:3px;cursor:pointer;">+ New Race</button>
                 `;
                 const sel = content.querySelector("#st_race");
                 if (raceW && sel) {
@@ -84,15 +85,17 @@ app.registerExtension({
                 const cb = content.querySelector("#st_gender");
                 if (genderW && cb) { cb.checked = !!genderW.value; cb.onchange = () => { genderW.value = cb.checked; }; }
                 const tp = content.querySelector("#st_rpos");
-                if (posW && tp) {
-                    tp.value = data.positive || posW.value || "";
-                    tp.oninput = () => { posW.value = tp.value; };
-                }
+                if (posW && tp) { tp.value = data.positive || posW.value || ""; tp.oninput = () => { posW.value = tp.value; }; }
                 const tn = content.querySelector("#st_rneg");
-                if (negW && tn) {
-                    tn.value = data.negative || negW.value || "";
-                    tn.oninput = () => { negW.value = tn.value; };
-                }
+                if (negW && tn) { tn.value = data.negative || negW.value || ""; tn.oninput = () => { negW.value = tn.value; }; }
+                content.querySelector("#st_new_race").onclick = async () => {
+                    const name = prompt("New race name:");
+                    if (!name) return;
+                    const pos = content.querySelector("#st_rpos").value;
+                    const neg = content.querySelector("#st_rneg").value;
+                    await api(`/stierltz/save_race`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({name, positive:pos, negative:neg})});
+                    alert("Saved: " + name);
+                };
             } else {
                 const clothesName = clothesW?.value || "none";
                 const data = await api(`/stierltz/clothes/${clothesName}`);
@@ -101,8 +104,9 @@ app.registerExtension({
                 content.innerHTML = `
                     <div style="margin-bottom:6px;"><label style="font-size:11px;color:#aaa;">Clothes</label>
                         <select id="st_clothes" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;padding:4px;border-radius:3px;"></select></div>
-                    <div><label style="font-size:11px;color:#aaa;">Clothes Positive</label>
+                    <div style="margin-bottom:6px;"><label style="font-size:11px;color:#aaa;">Clothes Positive</label>
                         <textarea id="st_cpos" rows="3" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;border-radius:3px;resize:vertical;font-size:11px;"></textarea></div>
+                    <button id="st_new_clothes" style="width:100%;padding:5px;background:#3a5a3a;color:#fff;border:none;border-radius:3px;cursor:pointer;">+ New Clothes</button>
                 `;
                 const sel = content.querySelector("#st_clothes");
                 if (clothesW && sel) {
@@ -115,10 +119,14 @@ app.registerExtension({
                     sel.onchange = async () => { clothesW.value = sel.value; await render(); };
                 }
                 const tc = content.querySelector("#st_cpos");
-                if (cposW && tc) {
-                    tc.value = data.positive || cposW.value || "";
-                    tc.oninput = () => { cposW.value = tc.value; };
-                }
+                if (cposW && tc) { tc.value = data.positive || cposW.value || ""; tc.oninput = () => { cposW.value = tc.value; }; }
+                content.querySelector("#st_new_clothes").onclick = async () => {
+                    const name = prompt("New clothes name:");
+                    if (!name) return;
+                    const pos = content.querySelector("#st_cpos").value;
+                    await api(`/stierltz/save_clothes`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({name, positive:pos})});
+                    alert("Saved: " + name);
+                };
             }
         };
 
@@ -130,7 +138,7 @@ app.registerExtension({
             for (const w of node.widgets || []) {
                 if (hide.includes(w.name)) w.hidden = true;
             }
-            node.setSize([Math.max(node.size[0], 340), 440]);
+            node.setSize([Math.max(node.size[0], 340), 480]);
         };
 
         const updatePos = () => {
@@ -148,7 +156,6 @@ app.registerExtension({
 
         const origDraw = node.onDrawForeground;
         node.onDrawForeground = function(ctx) { updatePos(); if (origDraw) origDraw.apply(this, arguments); };
-
         const origRemoved = node.onRemoved;
         node.onRemoved = function() { container.remove(); if (origRemoved) origRemoved.apply(this, arguments); };
 
