@@ -32,24 +32,27 @@ app.registerExtension({
         document.body.appendChild(container);
 
         node._tab = "race";
-        node._lastRace = "";
 
         const getW = (name) => node.widgets?.find(w => w.name === name);
 
-        const loadRaceData = async (raceName) => {
-            if (!raceName || raceName === "none") return { positive: "", negative: "" };
+        const loadRace = async (name) => {
+            if (!name || name === "none") return {positive:"", negative:""};
             try {
-                const r = await fetch(`/input/stierltz/races/${raceName}.json`);
+                const r = await fetch(`/api/userdata/stierltz/races/${name}.json`);
                 if (r.ok) return await r.json();
-            } catch (e) {}
-            return { positive: "", negative: "" };
+            } catch(e) {}
+            try {
+                const r = await fetch(`/input/stierltz/races/${name}.json`);
+                if (r.ok) return await r.json();
+            } catch(e) {}
+            return {positive:"", negative:""};
         };
 
         const render = async () => {
-            content.innerHTML = "";
             const isRace = node._tab === "race";
             styleBtn(raceBtn, isRace);
             styleBtn(clothesBtn, !isRace);
+            content.innerHTML = "";
 
             const raceW = getW("race");
             const genderW = getW("gender_male");
@@ -60,20 +63,18 @@ app.registerExtension({
 
             if (isRace) {
                 const raceName = raceW?.value || "none";
-                if (raceName !== node._lastRace) {
-                    const data = await loadRaceData(raceName);
-                    if (posW) posW.value = data.positive || "";
-                    if (negW) negW.value = data.negative || "";
-                    node._lastRace = raceName;
-                }
+                const data = await loadRace(raceName);
+                if (posW && data.positive) posW.value = data.positive;
+                if (negW && data.negative) negW.value = data.negative;
+
                 content.innerHTML = `
-                    <div style="margin-bottom:6px;"><label style="font-size:11px; color:#aaa;">Race</label>
+                    <div style="margin-bottom:6px;"><label style="font-size:11px;color:#aaa;">Race</label>
                         <select id="st_race" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;padding:4px;border-radius:3px;"></select></div>
                     <div style="margin-bottom:6px;"><label style="font-size:12px;"><input type="checkbox" id="st_gender"> Male</label></div>
-                    <div style="margin-bottom:6px;"><label style="font-size:11px; color:#aaa;">Positive</label>
-                        <textarea id="st_rpos" rows="3" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;border-radius:3px;resize:vertical;font-size:11px;"></textarea></div>
-                    <div><label style="font-size:11px; color:#aaa;">Negative</label>
-                        <textarea id="st_rneg" rows="2" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;border-radius:3px;resize:vertical;font-size:11px;"></textarea></div>
+                    <div style="margin-bottom:6px;"><label style="font-size:11px;color:#aaa;">Positive</label>
+                        <textarea id="st_rpos" rows="4" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;border-radius:3px;resize:vertical;font-size:11px;"></textarea></div>
+                    <div><label style="font-size:11px;color:#aaa;">Negative</label>
+                        <textarea id="st_rneg" rows="3" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;border-radius:3px;resize:vertical;font-size:11px;"></textarea></div>
                 `;
                 const sel = content.querySelector("#st_race");
                 if (raceW && sel) {
@@ -83,23 +84,19 @@ app.registerExtension({
                         if (v === raceW.value) o.selected = true;
                         sel.appendChild(o);
                     });
-                    sel.onchange = async () => {
-                        raceW.value = sel.value;
-                        node._lastRace = "";
-                        await render();
-                    };
+                    sel.onchange = async () => { raceW.value = sel.value; await render(); };
                 }
                 const cb = content.querySelector("#st_gender");
                 if (genderW && cb) { cb.checked = !!genderW.value; cb.onchange = () => { genderW.value = cb.checked; }; }
                 const tp = content.querySelector("#st_rpos");
-                if (posW && tp) { tp.value = posW.value || ""; tp.oninput = () => { posW.value = tp.value; }; }
+                if (posW && tp) { tp.value = posW.value || data.positive || ""; tp.oninput = () => { posW.value = tp.value; }; }
                 const tn = content.querySelector("#st_rneg");
-                if (negW && tn) { tn.value = negW.value || ""; tn.oninput = () => { negW.value = tn.value; }; }
+                if (negW && tn) { tn.value = negW.value || data.negative || ""; tn.oninput = () => { negW.value = tn.value; }; }
             } else {
                 content.innerHTML = `
-                    <div style="margin-bottom:6px;"><label style="font-size:11px; color:#aaa;">Clothes</label>
+                    <div style="margin-bottom:6px;"><label style="font-size:11px;color:#aaa;">Clothes</label>
                         <select id="st_clothes" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;padding:4px;border-radius:3px;"></select></div>
-                    <div><label style="font-size:11px; color:#aaa;">Clothes Positive</label>
+                    <div><label style="font-size:11px;color:#aaa;">Clothes Positive</label>
                         <textarea id="st_cpos" rows="3" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;border-radius:3px;resize:vertical;font-size:11px;"></textarea></div>
                 `;
                 const sel = content.querySelector("#st_clothes");
@@ -121,38 +118,32 @@ app.registerExtension({
         clothesBtn.onclick = () => { node._tab = "clothes"; render(); };
 
         const hideNative = () => {
-            const hide = ["race", "clothes", "gender_male", "race_positive", "race_negative", "clothes_positive", "tab"];
+            const hide = ["race","clothes","gender_male","race_positive","race_negative","clothes_positive","tab"];
             for (const w of node.widgets || []) {
                 if (hide.includes(w.name)) w.hidden = true;
             }
-            node.setSize([Math.max(node.size[0], 320), 360]);
+            node.setSize([Math.max(node.size[0], 340), 420]);
         };
 
         const updatePos = () => {
             if (!node.pos || !app.canvas) return;
             const scale = app.canvas.ds?.scale || 1;
-            const offset = app.canvas.ds?.offset || [0, 0];
-            const topOffset = 72;
+            const offset = app.canvas.ds?.offset || [0,0];
+            const topOffset = 78;
             const x = (node.pos[0] + offset[0]) * scale + 8 * scale;
             const y = (node.pos[1] + offset[1] + topOffset) * scale;
             const w = (node.size[0] - 16) * scale;
             container.style.left = x + "px";
             container.style.top = y + "px";
-            container.style.width = Math.max(200, w) + "px";
+            container.style.width = Math.max(220, w) + "px";
         };
 
         const origDraw = node.onDrawForeground;
-        node.onDrawForeground = function (ctx) {
-            updatePos();
-            if (origDraw) origDraw.apply(this, arguments);
-        };
+        node.onDrawForeground = function(ctx) { updatePos(); if (origDraw) origDraw.apply(this, arguments); };
 
         const origRemoved = node.onRemoved;
-        node.onRemoved = function () {
-            container.remove();
-            if (origRemoved) origRemoved.apply(this, arguments);
-        };
+        node.onRemoved = function() { container.remove(); if (origRemoved) origRemoved.apply(this, arguments); };
 
-        setTimeout(() => { render(); hideNative(); updatePos(); }, 150);
+        setTimeout(() => { render(); hideNative(); updatePos(); }, 200);
     }
 });
