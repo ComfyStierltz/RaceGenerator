@@ -5,37 +5,70 @@ app.registerExtension({
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
         if (nodeData.name !== "StierltzRaceClothes") return;
 
-        const origOnNodeCreated = nodeType.prototype.onNodeCreated;
+        const TAB_H = 28;
+        const origOnDrawForeground = nodeType.prototype.onDrawForeground;
+        const origOnMouseDown = nodeType.prototype.onMouseDown;
+        const origComputeSize = nodeType.prototype.computeSize;
+
         nodeType.prototype.onNodeCreated = function () {
-            const r = origOnNodeCreated?.apply(this, arguments);
-
-            // Tab state
             this._tab = "race";
+            this._tabs = [
+                { id: "race", label: "Race" },
+                { id: "clothes", label: "Clothes" }
+            ];
+        };
 
-            // Add tab switcher buttons at the top
-            const raceBtn = this.addWidget("button", "► Race", null, () => this.switchTab("race"), { serialize: false });
-            const clothesBtn = this.addWidget("button", "Clothes", null, () => this.switchTab("clothes"), { serialize: false });
+        nodeType.prototype.computeSize = function (out) {
+            const size = origComputeSize?.apply(this, arguments) || [340, 200];
+            size[1] += TAB_H;
+            return size;
+        };
 
-            this.switchTab = (tab) => {
-                this._tab = tab;
-                raceBtn.name = tab === "race" ? "► Race" : "Race";
-                clothesBtn.name = tab === "clothes" ? "► Clothes" : "Clothes";
+        nodeType.prototype.onDrawForeground = function (ctx) {
+            origOnDrawForeground?.apply(this, arguments);
+            if (!this._tabs) return;
 
-                // Widget visibility by name
-                const raceOnly = ["race", "gender_male", "race_positive", "race_negative"];
-                const clothesOnly = ["clothes", "clothes_positive"];
+            const tabW = this.size[0] / this._tabs.length;
+            ctx.save();
+            ctx.font = "13px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
 
-                for (const w of this.widgets || []) {
-                    if (raceOnly.includes(w.name)) w.hidden = tab !== "race";
-                    if (clothesOnly.includes(w.name)) w.hidden = tab !== "clothes";
+            this._tabs.forEach((tab, i) => {
+                const x = i * tabW;
+                const active = this._tab === tab.id;
+                ctx.fillStyle = active ? "#444" : "#2a2a2a";
+                ctx.fillRect(x, 0, tabW, TAB_H);
+                ctx.strokeStyle = "#666";
+                ctx.strokeRect(x, 0, tabW, TAB_H);
+                ctx.fillStyle = active ? "#fff" : "#aaa";
+                ctx.fillText(tab.label, x + tabW / 2, TAB_H / 2);
+            });
+            ctx.restore();
+        };
+
+        nodeType.prototype.onMouseDown = function (e, local_pos, graphCanvas) {
+            if (local_pos[1] < TAB_H && this._tabs) {
+                const tabW = this.size[0] / this._tabs.length;
+                const idx = Math.floor(local_pos[0] / tabW);
+                if (this._tabs[idx]) {
+                    this._tab = this._tabs[idx].id;
+                    this._applyTabVisibility();
+                    this.setDirtyCanvas(true);
+                    return true;
                 }
-                this.setSize(this.computeSize());
-                this.setDirtyCanvas(true);
-            };
+            }
+            return origOnMouseDown?.apply(this, arguments);
+        };
 
-            // Initial
-            setTimeout(() => this.switchTab("race"), 100);
-            return r;
+        nodeType.prototype._applyTabVisibility = function () {
+            const raceOnly = ["race", "gender_male", "race_positive", "race_negative"];
+            const clothesOnly = ["clothes", "clothes_positive"];
+            for (const w of this.widgets || []) {
+                if (raceOnly.includes(w.name)) w.hidden = this._tab !== "race";
+                if (clothesOnly.includes(w.name)) w.hidden = this._tab !== "clothes";
+            }
+            this.setSize(this.computeSize());
         };
     }
 });
