@@ -1,6 +1,6 @@
 import { app } from "../../../scripts/app.js";
 
-const TAB_H = 36;
+const TAB_H = 40;
 
 app.registerExtension({
     name: "stierltz.RaceClothesTabs",
@@ -14,18 +14,26 @@ app.registerExtension({
             { id: "clothes", label: "Clothes" }
         ];
 
-        // Increase node height to make room for tabs
+        // Spacer widget at the top to push content down
+        const spacer = node.addWidget("button", "", "", () => {}, { serialize: false });
+        spacer.computeSize = () => [0, TAB_H];
+        spacer.hidden = false;
+        // Move spacer to front
+        const idx = node.widgets.indexOf(spacer);
+        if (idx > 0) {
+            node.widgets.splice(idx, 1);
+            node.widgets.unshift(spacer);
+        }
+
         const origComputeSize = node.computeSize;
         node.computeSize = function () {
-            const size = origComputeSize ? origComputeSize.apply(this, arguments) : [340, 200];
-            size[1] = Math.max(size[1], 280) + TAB_H;
+            const size = origComputeSize ? origComputeSize.apply(this, arguments) : [340, 240];
             return size;
         };
 
-        // Draw tabs at the top, content below
         const origDraw = node.onDrawForeground;
         node.onDrawForeground = function (ctx) {
-            // Draw tabs first (at y=0)
+            // Draw tab bar at the very top
             if (this._tabs) {
                 const w = this.size[0];
                 const tabW = w / this._tabs.length;
@@ -49,7 +57,6 @@ app.registerExtension({
             if (origDraw) origDraw.apply(this, arguments);
         };
 
-        // Click on tabs
         const origMouse = node.onMouseDown;
         node.onMouseDown = function (e, localPos) {
             if (localPos && localPos[1] < TAB_H && this._tabs) {
@@ -69,12 +76,13 @@ app.registerExtension({
             const raceOnly = ["race", "gender_male", "race_positive", "race_negative"];
             const clothesOnly = ["clothes", "clothes_positive"];
             for (const w of this.widgets || []) {
+                if (w === spacer) continue;
                 if (raceOnly.includes(w.name)) w.hidden = this._tab !== "race";
                 if (clothesOnly.includes(w.name)) w.hidden = this._tab !== "clothes";
             }
             this.setSize(this.computeSize());
         };
 
-        setTimeout(() => node._applyVisibility?.(), 100);
+        setTimeout(() => node._applyVisibility?.(), 150);
     }
 });
