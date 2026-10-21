@@ -111,8 +111,8 @@ class StierltzRaceClothes:
             if changed:
                 self._save(clothes_dir, clothes, clothes_data)
 
-        r_pos = race_data.get(f"{gender}_positive") or race_positive or ""
-        r_neg = race_data.get(f"{gender}_negative") or race_negative or ""
+        r_pos = race_data.get(f"{gender}_positive") or race_data.get("positive") or race_positive or ""
+        r_neg = race_data.get(f"{gender}_negative") or race_data.get("negative") or race_negative or ""
         c_pos = clothes_data.get("positive") or clothes_positive or ""
         c_neg = clothes_data.get("negative") or clothes_negative or ""
 

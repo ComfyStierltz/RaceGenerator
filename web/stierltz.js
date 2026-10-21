@@ -70,8 +70,8 @@ app.registerExtension({
             if (isRace) {
                 const raceName = raceW?.value || "none";
                 const data = await api(`/stierltz/race/${raceName}`);
-                const gPos = data[`${gender}_positive`] || "";
-                const gNeg = data[`${gender}_negative`] || "";
+                const gPos = data[`${gender}_positive`] || data.positive || "";
+                const gNeg = data[`${gender}_negative`] || data.negative || "";
                 if (posW) posW.value = gPos;
                 if (negW) negW.value = gNeg;
 
