@@ -1,4 +1,5 @@
-import { app } from "../../scripts/app.js";
+import { app } from "../../../scripts/app.js";
+console.log("[stierltz] extension loading...");
 
 const TAB_H = 32;
 
