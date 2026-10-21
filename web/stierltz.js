@@ -9,17 +9,17 @@ app.registerExtension({
         const container = document.createElement("div");
         container.style.cssText = `
             position: absolute; background: #1a1a1a; border: 1px solid #444;
-            border-radius: 4px; padding: 6px; z-index: 5;
+            border-radius: 4px; padding: 8px; z-index: 5;
             font-family: sans-serif; font-size: 12px; color: #ddd;
-            pointer-events: auto; box-sizing: border-box; overflow: hidden;
+            pointer-events: auto; box-sizing: border-box;
         `;
 
         const tabBar = document.createElement("div");
-        tabBar.style.cssText = "display:flex; gap:4px; margin-bottom:6px;";
+        tabBar.style.cssText = "display:flex; gap:4px; margin-bottom:8px;";
         const raceBtn = document.createElement("button");
         const clothesBtn = document.createElement("button");
         const styleBtn = (b, active) => {
-            b.style.cssText = `flex:1; padding:5px; border:none; border-radius:3px; cursor:pointer;
+            b.style.cssText = `flex:1; padding:6px; border:none; border-radius:3px; cursor:pointer;
                 background:${active ? "#5a3d8a" : "#333"}; color:${active ? "#fff" : "#aaa"}; font-weight:bold; font-size:12px;`;
         };
         raceBtn.textContent = "Race";
@@ -47,12 +47,12 @@ app.registerExtension({
                 const posW = getW("race_positive");
                 const negW = getW("race_negative");
                 content.innerHTML = `
-                    <div style="margin-bottom:4px;"><label style="font-size:11px;">Race</label>
-                        <select id="st_race" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;padding:3px;border-radius:3px;"></select></div>
-                    <div style="margin-bottom:4px;"><label style="font-size:11px;"><input type="checkbox" id="st_gender"> Male</label></div>
-                    <div style="margin-bottom:4px;"><label style="font-size:11px;">Positive</label>
-                        <textarea id="st_rpos" rows="2" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;border-radius:3px;resize:vertical;font-size:11px;"></textarea></div>
-                    <div><label style="font-size:11px;">Negative</label>
+                    <div style="margin-bottom:6px;"><label style="font-size:11px; color:#aaa;">Race</label>
+                        <select id="st_race" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;padding:4px;border-radius:3px;"></select></div>
+                    <div style="margin-bottom:6px;"><label style="font-size:12px;"><input type="checkbox" id="st_gender"> Male</label></div>
+                    <div style="margin-bottom:6px;"><label style="font-size:11px; color:#aaa;">Positive</label>
+                        <textarea id="st_rpos" rows="3" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;border-radius:3px;resize:vertical;font-size:11px;"></textarea></div>
+                    <div><label style="font-size:11px; color:#aaa;">Negative</label>
                         <textarea id="st_rneg" rows="2" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;border-radius:3px;resize:vertical;font-size:11px;"></textarea></div>
                 `;
                 const sel = content.querySelector("#st_race");
@@ -75,10 +75,10 @@ app.registerExtension({
                 const clothesW = getW("clothes");
                 const cposW = getW("clothes_positive");
                 content.innerHTML = `
-                    <div style="margin-bottom:4px;"><label style="font-size:11px;">Clothes</label>
-                        <select id="st_clothes" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;padding:3px;border-radius:3px;"></select></div>
-                    <div><label style="font-size:11px;">Clothes Positive</label>
-                        <textarea id="st_cpos" rows="2" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;border-radius:3px;resize:vertical;font-size:11px;"></textarea></div>
+                    <div style="margin-bottom:6px;"><label style="font-size:11px; color:#aaa;">Clothes</label>
+                        <select id="st_clothes" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;padding:4px;border-radius:3px;"></select></div>
+                    <div><label style="font-size:11px; color:#aaa;">Clothes Positive</label>
+                        <textarea id="st_cpos" rows="3" style="width:100%;background:#2a2a2a;color:#fff;border:1px solid #555;border-radius:3px;resize:vertical;font-size:11px;"></textarea></div>
                 `;
                 const sel = content.querySelector("#st_clothes");
                 if (clothesW && sel) {
@@ -98,28 +98,27 @@ app.registerExtension({
         raceBtn.onclick = () => { node._tab = "race"; render(); };
         clothesBtn.onclick = () => { node._tab = "clothes"; render(); };
 
-        // Hide native widgets so only the div shows
         const hideNative = () => {
             const hide = ["race", "clothes", "gender_male", "race_positive", "race_negative", "clothes_positive", "tab"];
             for (const w of node.widgets || []) {
                 if (hide.includes(w.name)) w.hidden = true;
             }
-            // Shrink node to just title + sockets + our overlay
-            node.setSize([node.size[0], 90]);
+            // Make node tall enough to contain the overlay
+            node.setSize([Math.max(node.size[0], 320), 340]);
         };
 
         const updatePos = () => {
             if (!node.pos || !app.canvas) return;
             const scale = app.canvas.ds?.scale || 1;
             const offset = app.canvas.ds?.offset || [0, 0];
-            // Position inside the node, below title bar (~28px) and sockets
-            const titleH = 28;
-            const x = (node.pos[0] + offset[0]) * scale + 6 * scale;
-            const y = (node.pos[1] + offset[1] + titleH + 8) * scale;
-            const w = (node.size[0] - 12) * scale;
+            // Below title (~30) + socket row (~36)
+            const topOffset = 68;
+            const x = (node.pos[0] + offset[0]) * scale + 8 * scale;
+            const y = (node.pos[1] + offset[1] + topOffset) * scale;
+            const w = (node.size[0] - 16) * scale;
             container.style.left = x + "px";
             container.style.top = y + "px";
-            container.style.width = Math.max(180, w) + "px";
+            container.style.width = Math.max(200, w) + "px";
         };
 
         const origDraw = node.onDrawForeground;
