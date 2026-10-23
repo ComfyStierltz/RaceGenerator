@@ -1,20 +1,121 @@
 import json
-from pathlib import Path
+import os
+import re
 
-import folder_paths
+from aiohttp import web
+
+try:
+    from server import PromptServer
+except Exception:
+    PromptServer = None
+
+PACK_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+RACE_DIR = os.path.join(PACK_DIR, "races")
+CLOTHES_DIR = os.path.join(PACK_DIR, "clothes")
+NAKED = "naked"
+
+
+def slug(name):
+    clean = re.sub(r"[^0-9A-Za-zА-Яа-я_\- ]+", "", name).strip().replace(" ", "_")
+    return clean or "preset"
+
+
+def read_json(path):
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def race_files():
+    os.makedirs(RACE_DIR, exist_ok=True)
+    return sorted(p for p in os.listdir(RACE_DIR) if p.endswith(".json"))
+
+
+def clothes_files():
+    os.makedirs(CLOTHES_DIR, exist_ok=True)
+    return sorted(p for p in os.listdir(CLOTHES_DIR) if p.endswith(".json"))
+
+
+def race_names():
+    found = []
+    for name in race_files():
+        data = read_json(os.path.join(RACE_DIR, name))
+        found.append(data.get("name") or name[:-5])
+    return found or ["(пусто)"]
+
+
+def clothes_names():
+    found = [NAKED]
+    for name in clothes_files():
+        data = read_json(os.path.join(CLOTHES_DIR, name))
+        found.append(data.get("name") or name[:-5])
+    return found
+
+
+def race_folder():
+    import folder_paths
+    folder = os.path.join(folder_paths.get_input_directory(), "RaceGenerator", "races")
+    os.makedirs(folder, exist_ok=True)
+    return folder
+
+
+def race_images():
+    names = ["none"]
+    for name in sorted(os.listdir(race_folder())):
+        if name.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".bmp")):
+            names.append(f"RaceGenerator/races/{name}")
+    return names
+
+
+def load_race(name):
+    for file_name in race_files():
+        data = read_json(os.path.join(RACE_DIR, file_name))
+        if data.get("name") == name or file_name[:-5] == name:
+            return data
+    return {}
+
+
+def load_clothes(name):
+    if not name or name == NAKED:
+        return ""
+    for file_name in clothes_files():
+        data = read_json(os.path.join(CLOTHES_DIR, file_name))
+        if data.get("name") == name or file_name[:-5] == name:
+            return data.get("text") or ""
+    return ""
+
+
+def save_race(name, anatomy, negative, reference="none", gender="female"):
+    os.makedirs(RACE_DIR, exist_ok=True)
+    path = os.path.join(RACE_DIR, slug(name) + ".json")
+    current = {}
+    if os.path.isfile(path):
+        current = read_json(path)
+    if "genders" not in current:
+        current["genders"] = {}
+    current["name"] = name
+    current["genders"][gender] = {"anatomy": anatomy, "negative": negative}
+    current["reference"] = reference
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(current, f, ensure_ascii=False, indent=2)
+
+
+def save_clothes(name, text):
+    if name == NAKED:
+        return
+    os.makedirs(CLOTHES_DIR, exist_ok=True)
+    path = os.path.join(CLOTHES_DIR, slug(name) + ".json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump({"name": name, "text": text}, f, ensure_ascii=False, indent=2)
+
 
 class StierltzRaceClothes:
     @classmethod
     def INPUT_TYPES(cls):
-        races = cls._list_races()
-        clothes = cls._list_clothes()
         return {
             "required": {
-                "race": (["none"] + races, {"default": "none"}),
-                "clothes": (["none"] + clothes, {"default": "none"}),
-                "gender_male": ("BOOLEAN", {"default": False, "label_on": "male", "label_off": "female"}),
-            },
-            "optional": {
+                "race": (race_names(), {"default": race_names()[0]}),
+                "clothes": (clothes_names(), {"default": NAKED}),
+                "gender_male": ("BOOLEAN", {"default": False}),
                 "race_positive": ("STRING", {"multiline": True, "default": ""}),
                 "race_negative": ("STRING", {"multiline": True, "default": ""}),
                 "clothes_positive": ("STRING", {"multiline": True, "default": ""}),
@@ -24,186 +125,67 @@ class StierltzRaceClothes:
 
     RETURN_TYPES = ("STRING", "STRING")
     RETURN_NAMES = ("positive", "negative")
-    FUNCTION = "build"
-    CATEGORY = "stierltz"
+    FUNCTION = "run"
+    CATEGORY = "sprite"
 
-    @staticmethod
-    def _base_dir():
-        base = Path(folder_paths.get_input_directory()) / "stierltz"
-        base.mkdir(parents=True, exist_ok=True)
-        return base
-
-    @classmethod
-    def _races_dir(cls):
-        d = cls._base_dir() / "races"
-        d.mkdir(exist_ok=True)
-        return d
-
-    @classmethod
-    def _clothes_dir(cls):
-        d = cls._base_dir() / "clothes"
-        d.mkdir(exist_ok=True)
-        return d
-
-    @classmethod
-    def _list_races(cls):
-        try:
-            return sorted([f.stem for f in cls._races_dir().glob("*.json")])
-        except Exception:
-            return []
-
-    @classmethod
-    def _list_clothes(cls):
-        try:
-            return sorted([f.stem for f in cls._clothes_dir().glob("*.json")])
-        except Exception:
-            return []
-
-    @classmethod
-    def _load(cls, folder: Path, name: str):
-        if not name or name == "none":
-            return {}
-        p = folder / f"{name}.json"
-        if p.exists():
-            try:
-                return json.loads(p.read_text(encoding="utf-8"))
-            except Exception:
-                return {}
-        return {}
-
-    @classmethod
-    def _save(cls, folder: Path, name: str, data: dict):
-        if not name or name == "none":
-            return
-        p = folder / f"{name}.json"
-        p.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-
-    def build(self, race, clothes, gender_male, race_positive="", race_negative="", clothes_positive="", clothes_negative=""):
-        races_dir = self._races_dir()
-        clothes_dir = self._clothes_dir()
-
-        race_data = self._load(races_dir, race)
-        clothes_data = self._load(clothes_dir, clothes)
-
+    def run(self, race, clothes, gender_male, race_positive, race_negative, clothes_positive, clothes_negative):
         gender = "male" if gender_male else "female"
-
-        if race != "none":
-            key_pos = f"{gender}_positive"
-            key_neg = f"{gender}_negative"
-            changed = False
-            if race_positive and race_positive != race_data.get(key_pos, ""):
-                race_data[key_pos] = race_positive
-                changed = True
-            if race_negative and race_negative != race_data.get(key_neg, ""):
-                race_data[key_neg] = race_negative
-                changed = True
-            if changed:
-                self._save(races_dir, race, race_data)
-
-        if clothes != "none" and (clothes_positive or clothes_negative):
-            changed = False
-            if clothes_positive and clothes_positive != clothes_data.get("positive", ""):
-                clothes_data["positive"] = clothes_positive
-                changed = True
-            if clothes_negative and clothes_negative != clothes_data.get("negative", ""):
-                clothes_data["negative"] = clothes_negative
-                changed = True
-            if changed:
-                self._save(clothes_dir, clothes, clothes_data)
-
-        r_pos = race_data.get(f"{gender}_positive") or race_data.get("positive") or race_positive or ""
-        r_neg = race_data.get(f"{gender}_negative") or race_data.get("negative") or race_negative or ""
-        c_pos = clothes_data.get("positive") or clothes_positive or ""
-        c_neg = clothes_data.get("negative") or clothes_negative or ""
-
-        parts = []
-        if r_pos.strip():
-            parts.append(r_pos.strip())
-        if c_pos.strip() and clothes != "none":
-            parts.append(c_pos.strip())
-        elif clothes == "none":
-            parts.append("completely nude, no clothes, naked, bare skin")
-
-        positive = f"{gender}, " + ", ".join(parts) if parts else gender
-        negative = ", ".join(filter(None, [r_neg.strip(), c_neg.strip()]))
+        if race and race != "(пусто)":
+            save_race(race, race_positive, race_negative, "none", gender)
+        if clothes and clothes != NAKED and clothes_positive.strip():
+            save_clothes(clothes, clothes_positive)
+        positive = race_positive
+        negative = race_negative
+        if clothes != NAKED and clothes_positive.strip():
+            positive = f"{positive}, {clothes_positive}" if positive else clothes_positive
+        if clothes_negative.strip():
+            negative = f"{negative}, {clothes_negative}" if negative else clothes_negative
         return (positive, negative)
 
-    @classmethod
-    def IS_CHANGED(cls, **kwargs):
-        return float("nan")
+
+if PromptServer is not None:
+    @PromptServer.instance.routes.get("/stierltz/list")
+    async def stierltz_list(request):
+        return web.json_response({"races": race_names(), "clothes": clothes_names()})
+
+    @PromptServer.instance.routes.get("/stierltz/race")
+    async def stierltz_race(request):
+        name = request.query.get("name", "")
+        gender = request.query.get("gender", "female")
+        data = load_race(name)
+        genders = data.get("genders", {})
+        if gender in genders:
+            return web.json_response(genders[gender])
+        return web.json_response({"anatomy": data.get("anatomy", ""), "negative": data.get("negative", "")})
+
+    @PromptServer.instance.routes.get("/stierltz/clothes")
+    async def stierltz_clothes(request):
+        name = request.query.get("name", "")
+        return web.json_response({"text": load_clothes(name)})
+
+    @PromptServer.instance.routes.post("/stierltz/save_race")
+    async def stierltz_save_race(request):
+        data = await request.json()
+        name = (data.get("name") or "").strip()
+        gender = data.get("gender", "female")
+        if not name:
+            return web.json_response({"error": "empty name"}, status=400)
+        save_race(name, data.get("anatomy") or "", data.get("negative") or "", "none", gender)
+        return web.json_response({"ok": True, "names": race_names()})
+
+    @PromptServer.instance.routes.post("/stierltz/save_clothes")
+    async def stierltz_save_clothes(request):
+        data = await request.json()
+        name = (data.get("name") or "").strip()
+        if not name or name == NAKED:
+            return web.json_response({"error": "bad name"}, status=400)
+        save_clothes(name, data.get("text") or "")
+        return web.json_response({"ok": True, "names": clothes_names()})
 
 
 NODE_CLASS_MAPPINGS = {
     "StierltzRaceClothes": StierltzRaceClothes,
 }
-
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "StierltzRaceClothes": "Stierltz Race & Clothes",
+    "StierltzRaceClothes": "Race & Clothes",
 }
-
-
-def setup_routes():
-    try:
-        from server import PromptServer
-        from aiohttp import web
-    except ImportError:
-        return
-
-    if PromptServer.instance is None:
-        return
-
-    @PromptServer.instance.routes.get("/stierltz/race/{name}")
-    async def get_race(request):
-        name = request.match_info["name"]
-        data = StierltzRaceClothes._load(StierltzRaceClothes._races_dir(), name)
-        return web.json_response(data)
-
-    @PromptServer.instance.routes.get("/stierltz/clothes/{name}")
-    async def get_clothes(request):
-        name = request.match_info["name"]
-        data = StierltzRaceClothes._load(StierltzRaceClothes._clothes_dir(), name)
-        return web.json_response(data)
-
-    @PromptServer.instance.routes.get("/stierltz/list")
-    async def list_all(request):
-        return web.json_response({
-            "races": StierltzRaceClothes._list_races(),
-            "clothes": StierltzRaceClothes._list_clothes(),
-        })
-
-    @PromptServer.instance.routes.post("/stierltz/save_race")
-    async def save_race(request):
-        data = await request.json()
-        name = data.get("name", "").strip().replace(" ", "_")
-        if not name:
-            return web.json_response({"error": "empty name"}, status=400)
-        d = StierltzRaceClothes._races_dir()
-        p = d / f"{name}.json"
-        existing = {}
-        if p.exists():
-            try:
-                existing = json.loads(p.read_text(encoding="utf-8"))
-            except Exception:
-                pass
-        gender = data.get("gender", "female")
-        existing[f"{gender}_positive"] = data.get("positive", "")
-        existing[f"{gender}_negative"] = data.get("negative", "")
-        p.write_text(json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
-        return web.json_response({"saved": name})
-
-    @PromptServer.instance.routes.post("/stierltz/save_clothes")
-    async def save_clothes(request):
-        data = await request.json()
-        name = data.get("name", "").strip().replace(" ", "_")
-        if not name:
-            return web.json_response({"error": "empty name"}, status=400)
-        d = StierltzRaceClothes._clothes_dir()
-        p = d / f"{name}.json"
-        out = {"positive": data.get("positive", ""), "negative": data.get("negative", "")}
-        p.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
-        return web.json_response({"saved": name, "list": StierltzRaceClothes._list_clothes()})
-
-try:
-    setup_routes()
-except Exception as e:
-    print(f"[stierltz] route setup failed: {e}")
