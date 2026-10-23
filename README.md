@@ -9,3 +9,7 @@ Custom ComfyUI node for race and clothing presets.
 
 ## Install
 Copy the `stierltz` folder into `ComfyUI/custom_nodes/` and restart.
+
+## Tabs
+The StierltzRaceClothes node has two tabs (Race / Clothes) implemented via web extension.
+Click the "Tab: Race" or "Tab: Clothes" buttons to switch.
