@@ -77,6 +77,7 @@ app.registerExtension({
         const racePos = widget(node, "race_positive");
         const raceNeg = widget(node, "race_negative");
         const clothesPos = widget(node, "clothes_positive");
+        const clothesNeg = widget(node, "clothes_negative");
 
         if (race) {
             const prev = race.callback;
@@ -126,5 +127,39 @@ app.registerExtension({
                 if (prev) return prev.apply(this, arguments);
             };
         }
+
+        node.addWidget("button", "Создать расу", null, async () => {
+            const name = prompt("Имя новой расы");
+            if (!name) return;
+            const response = await fetch("/stierltz/save_race", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    name,
+                    gender: widget(node, "gender_male")?.value ? "male" : "female",
+                    anatomy: widget(node, "race_positive")?.value || "",
+                    negative: widget(node, "race_negative")?.value || "",
+                }),
+            });
+            const data = await response.json();
+            setCombo(node, "race", data.names || [], name);
+        });
+
+        node.addWidget("button", "Создать одежду", null, async () => {
+            const name = prompt("Имя новой одежды");
+            if (!name) return;
+            const response = await fetch("/stierltz/save_clothes", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    name,
+                    text: widget(node, "clothes_positive")?.value || "",
+                }),
+            });
+            const data = await response.json();
+            setCombo(node, "clothes", data.names || [], name);
+        });
+
+        node.setSize([Math.max(node.size[0], 400), node.size[1] + 80]);
     },
 });

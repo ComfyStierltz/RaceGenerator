@@ -38,39 +38,33 @@ def clothes_files():
 def race_names():
     found = []
     for name in race_files():
-        data = read_json(os.path.join(RACE_DIR, name))
-        found.append(data.get("name") or name[:-5])
+        try:
+            data = read_json(os.path.join(RACE_DIR, name))
+            found.append(data.get("name") or name[:-5])
+        except:
+            pass
     return found or ["(пусто)"]
 
 
 def clothes_names():
     found = [NAKED]
     for name in clothes_files():
-        data = read_json(os.path.join(CLOTHES_DIR, name))
-        found.append(data.get("name") or name[:-5])
+        try:
+            data = read_json(os.path.join(CLOTHES_DIR, name))
+            found.append(data.get("name") or name[:-5])
+        except:
+            pass
     return found
-
-
-def race_folder():
-    import folder_paths
-    folder = os.path.join(folder_paths.get_input_directory(), "RaceGenerator", "races")
-    os.makedirs(folder, exist_ok=True)
-    return folder
-
-
-def race_images():
-    names = ["none"]
-    for name in sorted(os.listdir(race_folder())):
-        if name.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".bmp")):
-            names.append(f"RaceGenerator/races/{name}")
-    return names
 
 
 def load_race(name):
     for file_name in race_files():
-        data = read_json(os.path.join(RACE_DIR, file_name))
-        if data.get("name") == name or file_name[:-5] == name:
-            return data
+        try:
+            data = read_json(os.path.join(RACE_DIR, file_name))
+            if data.get("name") == name or file_name[:-5] == name:
+                return data
+        except:
+            pass
     return {}
 
 
@@ -78,9 +72,12 @@ def load_clothes(name):
     if not name or name == NAKED:
         return ""
     for file_name in clothes_files():
-        data = read_json(os.path.join(CLOTHES_DIR, file_name))
-        if data.get("name") == name or file_name[:-5] == name:
-            return data.get("text") or ""
+        try:
+            data = read_json(os.path.join(CLOTHES_DIR, file_name))
+            if data.get("name") == name or file_name[:-5] == name:
+                return data.get("text") or ""
+        except:
+            pass
     return ""
 
 
@@ -89,7 +86,10 @@ def save_race(name, anatomy, negative, reference="none", gender="female"):
     path = os.path.join(RACE_DIR, slug(name) + ".json")
     current = {}
     if os.path.isfile(path):
-        current = read_json(path)
+        try:
+            current = read_json(path)
+        except:
+            pass
     if "genders" not in current:
         current["genders"] = {}
     current["name"] = name
@@ -114,10 +114,10 @@ class StierltzRaceClothes:
         return {
             "required": {
                 "race": (race_names(), {"default": race_names()[0]}),
-                "clothes": (clothes_names(), {"default": NAKED}),
-                "gender_male": ("BOOLEAN", {"default": False}),
+                "gender_male": ("BOOLEAN", {"default": False, "label_on": "Male", "label_off": "Female"}),
                 "race_positive": ("STRING", {"multiline": True, "default": ""}),
                 "race_negative": ("STRING", {"multiline": True, "default": ""}),
+                "clothes": (clothes_names(), {"default": NAKED}),
                 "clothes_positive": ("STRING", {"multiline": True, "default": ""}),
                 "clothes_negative": ("STRING", {"multiline": True, "default": ""}),
             }
@@ -128,7 +128,7 @@ class StierltzRaceClothes:
     FUNCTION = "run"
     CATEGORY = "sprite"
 
-    def run(self, race, clothes, gender_male, race_positive, race_negative, clothes_positive, clothes_negative):
+    def run(self, race, gender_male, race_positive, race_negative, clothes, clothes_positive, clothes_negative):
         gender = "male" if gender_male else "female"
         if race and race != "(пусто)":
             save_race(race, race_positive, race_negative, "none", gender)
