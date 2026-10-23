@@ -1,15 +1,9 @@
-# stierltz
+# RaceGenerator
 
-Custom ComfyUI node for race and clothing presets.
+Ноды разложены по папкам. JSON рас и одежды остаются в корне.
 
-## Structure
-- `races/` — individual JSON files per race
-- `clothes/` — individual JSON files per clothing item
-- All data stored in `ComfyUI/input/stierltz/`
+- `race_clothes/nodes.py` — `SpritePromptPreset`, `SpritePresetSelect`. Пишет в `races/` и `clothes/`.
+- `pose_pick/nodes.py` — `SpritePosePick`.
+- `web/preset.js` — кнопки пресетов.
 
-## Install
-Copy the `stierltz` folder into `ComfyUI/custom_nodes/` and restart.
-
-## Tabs
-The StierltzRaceClothes node has two tabs (Race / Clothes) implemented via web extension.
-Click the "Tab: Race" or "Tab: Clothes" buttons to switch.
+Клонировать в `ComfyUI/custom_nodes/RaceGenerator` и перезапустить ComfyUI.
